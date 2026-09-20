@@ -199,7 +199,10 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     target_msg = update.message if update.message else update.callback_query.message
     if update.callback_query:
-        await update.callback_query.answer("Ad is coming soon!", show_alert=True)
+        try:
+            await update.callback_query.answer("Ad is coming soon!", show_alert=True)
+        except:
+            pass
     await target_msg.reply_text(text, parse_mode="Markdown")
 
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -662,7 +665,6 @@ if __name__ == '__main__':
     
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # সমস্ত ইনলাইন এবং মেসেজ হ্যান্ডলার সঠিকভাবে অর্গানাইজ করা হলো
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
