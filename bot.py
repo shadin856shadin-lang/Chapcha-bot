@@ -477,6 +477,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await verify_button(update, context)
         return
 
+    # এখানে ইনলাইন বাটনের 'btn_setwallet' এবং 'btn_withdraw_check' এর সঠিক কমান্ড যুক্ত করা হলো
     if data == "btn_setwallet":
         await set_wallet_menu(update, context)
         return
@@ -666,7 +667,6 @@ if __name__ == '__main__':
     
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # কমান্ড হ্যান্ডলারসমূহ সবার আগে
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
     app.add_handler(CommandHandler("ad", watch_ad_handler))
@@ -678,7 +678,6 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     
-    # ক্যালব্যাক এবং মেসেজ হ্যান্ডলার কমান্ডের পরে
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
