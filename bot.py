@@ -244,18 +244,17 @@ async def set_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     if query:
         try:
-            await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+            await query.message.reply_text("💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         except:
             pass
     elif update.message:
-        await update.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        await update.message.reply_text("💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
 
 async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
-    
     balance = user_balances.get(user_id, 0.0)
     total_w = user_total_withdrawn.get(user_id, 0.0)
     ref_count = user_referral_counts.get(user_id, 0)
@@ -278,6 +277,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Wallet: {wallet_status}"
     )
 
+    # সঠিক জায়গায় ইনলাইন বাটনগুলো সেট করা হলো
     if not wallet:
         keyboard = [
             [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
@@ -477,7 +477,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await verify_button(update, context)
         return
 
-    # এখানে ইনলাইন বাটনের 'btn_setwallet' এবং 'btn_withdraw_check' এর সঠিক কমান্ড যুক্ত করা হলো
+    # ইনলাইন বাটনের 'Set Wallet' এবং 'Withdraw' এর সঠিক হ্যান্ডলিং এখানে রাখা হলো
     if data == "btn_setwallet":
         await set_wallet_menu(update, context)
         return
