@@ -255,7 +255,6 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
-    target_msg = update.message if update.message else update.callback_query.message
     
     balance = user_balances.get(user_id, 0.0)
     total_w = user_total_withdrawn.get(user_id, 0.0)
@@ -289,7 +288,12 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    
+    # নতুন মেসেজ হিসেবে পাঠানো যাতে ইনলাইন বাটনগুলো সঠিকভাবে কাজ করে
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.message:
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
