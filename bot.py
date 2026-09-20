@@ -144,7 +144,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
-    # Account এবং Set Wallet বাদ দিয়ে বাকি অপশনগুলো রাখা হলো
     if user_id == ADMIN_ID:
         keyboard = [
             ['💸 Withdraw', '🚀 Earn'],
@@ -240,7 +239,6 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     wallet = user_wallets.get(user_id)
     
-    # যদি ওয়ালেট নাম্বার সেট করা না থাকে, তবে আগের Account ইনফরমেশন সহ নিচে Set Wallet ও Withdraw বাটন দেখাবে
     if not wallet:
         balance = user_balances.get(user_id, 0.0)
         total_w = user_total_withdrawn.get(user_id, 0.0)
@@ -271,7 +269,6 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
         return
 
-    # নাম্বার সেট করা থাকলে সরাসরি উইথড্র এমাউন্ট চাওয়ার অপশন আসবে
     context.user_data['waiting_for_withdraw_amount'] = True
     w_type = user_wallet_types.get(user_id, "Wallet")
     
@@ -287,13 +284,16 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
+    # এডমিন আইডি এবং আপনার দেওয়া দুটি গ্রুপের লিংক সহ সাপোর্ট বাটনসমূহ
     support_keyboard = [
-        [InlineKeyboardButton("💬 Contact Admin", url=f"https://t.me/{ADMIN_USERNAME}")]
+        [InlineKeyboardButton("💬 Contact Admin", url=f"https://t.me/{ADMIN_USERNAME}")],
+        [InlineKeyboardButton("📢 Official Channel", url="https://t.me/captchaearnofficial")],
+        [InlineKeyboardButton("👥 Support Group", url="https://t.me/Captchabotsupportgroup")]
     ]
     reply_markup = InlineKeyboardMarkup(support_keyboard)
     await update.message.reply_text(
-        "👨‍💻 **এডমিন সাপোর্ট প্যানেল:**\n\n"
-        "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন:",
+        "👨‍💻 **এডমিন সাপোর্ট ও কমিউনিটি প্যানেল:**\n\n"
+        "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন অথবা আমাদের অফিশিয়াল গ্রুপ ও চ্যানেলে যুক্ত থাকুন:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
