@@ -36,7 +36,7 @@ ADMIN_BKASH = "01705351616"
 ADMIN_USERNAME = "Ownertanvir99"
 REFER_BONUS = 5.0
 MIN_WITHDRAW = 50.0
-AD_REWARD = 4.0  # আপাতত এ্যাড বন্ধ রাখা হয়েছে
+AD_REWARD = 4.0
 
 GROUP_1 = "@Captchabotsupportgroup"
 GROUP_2 = "@captchaearnofficial"
@@ -307,7 +307,9 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👥 Support Group", url="https://t.me/Captchabotsupportgroup")]
     ]
     reply_markup = InlineKeyboardMarkup(support_keyboard)
-    await update.message.reply_text(
+    
+    msg = update.message if update.message else update.callback_query.message
+    await msg.reply_text(
         "👨‍💻 **এডমিন সাপোর্ট ও কমিউনিটি প্যানেল:**\n\n"
         "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন অথবা আমাদের পেমেন্ট ও সাপোর্ট গ্রুপে যুক্ত থাকুন:",
         reply_markup=reply_markup,
@@ -401,7 +403,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_wallet_types[user_id] = w_method
         context.user_data['waiting_for_wallet_input'] = None
         await update.message.reply_text(
-            f"🎉 **অভিনন্দন! আপনার {w_method.lower()} নাম্বার যোগ হয়েছে।**\n\n"
+            f"🎉 **অভিনন্দন! আপনার {w_method.lower()} নাম্বার সফলভাবে সেভ হয়েছে।**\n\n"
             f"নাম্বার: `{text}`",
             parse_mode="Markdown"
         )
@@ -419,7 +421,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             if amount < MIN_WITHDRAW or amount > balance:
-                await update.message.reply_text("❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নাই বা সর্বনিম্ন উইথড্র এমাউন্ট হয়নি।", parse_mode="Markdown")
+                await update.message.reply_text("❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নাই বা সর্বনিম্ন উইথড্র এমাউন্ট (৫০ টাকা) হয়নি।", parse_mode="Markdown")
                 return
 
             is_active = user_is_active.get(user_id, False)
@@ -487,13 +489,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        await query.message.reply_text("💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         return
 
     if data == "btn_withdraw_check":
         wallet = user_wallets.get(user_id)
         if not wallet:
-            await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
+            await query.message.reply_text("❌ আগে '💳 Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
             return
         context.user_data['waiting_for_withdraw_amount'] = True
         w_type = user_wallet_types.get(user_id, "Wallet")
@@ -507,17 +509,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "wallet_bkash":
         context.user_data['waiting_for_wallet_input'] = "bKash"
-        await query.message.reply_text("📱 আপনার বিকাশ নাম্বার লিখুন:", parse_mode="Markdown")
+        await query.message.reply_text("📱 আপনার বিকাশ (bKash) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
     if data == "wallet_nagad":
         context.user_data['waiting_for_wallet_input'] = "Nagad"
-        await query.message.reply_text("🟠 আপনার নগদ নাম্বার লিখুন:", parse_mode="Markdown")
+        await query.message.reply_text("🟠 আপনার নগদ (Nagad) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
     if data == "wallet_rocket":
         context.user_data['waiting_for_wallet_input'] = "Rocket"
-        await query.message.reply_text("🟣 আপনার রকেট নাম্বার লিখুন:", parse_mode="Markdown")
+        await query.message.reply_text("🟣 আপনার রকেট (Rocket) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
     if data.startswith("app_") and user_id == ADMIN_ID:
@@ -642,7 +644,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
-    app.add_handler(CommandHandler.activate if hasattr(CommandHandler, 'activate') else CommandHandler("activate", activate_user_command))
+    app.add_handler(CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
