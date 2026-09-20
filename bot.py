@@ -1,8 +1,8 @@
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
 import random
 import string
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import quote
 from PIL import Image, ImageDraw, ImageFont
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
@@ -36,7 +36,7 @@ ADMIN_BKASH = "01705351616"
 ADMIN_USERNAME = "Ownertanvir99"
 REFER_BONUS = 5.0
 MIN_WITHDRAW = 50.0
-AD_REWARD = 4.0  # প্রতি অ্যাড দেখার জন্য ৪ টাকা রিওয়ার্ড
+AD_REWARD = 4.0  # আপাতত এ্যাড বন্ধ রাখা হয়েছে
 
 GROUP_1 = "@Captchabotsupportgroup"
 GROUP_2 = "@captchaearnofficial"
@@ -207,26 +207,17 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # আপনার তৈরি করা ShrinkMe শর্টনার লিংক এখানে যুক্ত করা হলো
-    ad_url = "https://shrinkme.click/ky3DS"
-
-    keyboard = [
-        [InlineKeyboardButton("🌐 Visit Sponsor Ad (৫-৬ সেকেন্ড দেখুন)", url=ad_url)],
-        [InlineKeyboardButton("✅ Claim Ad Reward", callback_data="claim_ad_reward")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+    # এ্যাড কামিং সুন মেসেজ
     text = (
-        "📢 **স্পন্সর বিজ্ঞাপন (Ad)**\n\n"
-        "১. নিচের **'Visit Sponsor Ad'** বাটনে ক্লিক করে লিংকে অন্তত **৫ থেকে ৬ সেকেন্ড** অপেক্ষা করুন।\n"
-        "২. সময় শেষ হলে ফিরে এসে নিচের **'Claim Ad Reward'** বাটনে ক্লিক করুন।\n\n"
-        f"🎁 প্রতি সফল এড ভিউয়ে পাবেন: **{AD_REWARD} টাকা**"
+        "🚀 **Ad is coming soon!**\n\n"
+        "খুব শীঘ্রই নতুন বিজ্ঞাপন যুক্ত করা হবে। ততদিন পর্যন্ত ক্যাপচা পূরণ করে এবং বন্ধুদের রেফার করে ইনকাম করুন।"
     )
     
     if update.message:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+        await update.message.reply_text(text, parse_mode="Markdown")
     elif update.callback_query:
-        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+        await update.callback_query.answer("Ad is coming soon!", show_alert=True)
+        await update.callback_query.message.reply_text(text, parse_mode="Markdown")
 
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -482,31 +473,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "check_join":
         await verify_button(update, context)
-        return
-
-    if query.data == "claim_ad_reward":
-        user_balances[user_id] = user_balances.get(user_id, 0.0) + AD_REWARD
-        
-        # এখানেও রিওয়ার্ড ক্লেইমের পর নতুন বিজ্ঞাপনে ShrinkMe লিংক সেট করে দেওয়া হলো
-        next_ad_url = "https://shrinkme.click/ky3DS"
-        
-        keyboard = [
-            [InlineKeyboardButton("🔄 আরেকটি নতুন অ্যাড দেখুন", url=next_ad_url)],
-            [InlineKeyboardButton("✅ আবার Claim করুন", callback_data="claim_ad_reward")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        success_msg = (
-            f"🎉 **অভিনন্দন!**\n\n"
-            f"অ্যাড সফলভাবে দেখার জন্য আপনার অ্যাকাউন্টে **{AD_REWARD} টাকা** যোগ করা হয়েছে। 💰\n\n"
-            f"👇 আবার নতুন অ্যাড দেখতে চাইলে নিচের বাটনে ক্লিক করুন:"
-        )
-        
-        await query.answer(f"🎉 অভিনন্দন! সফলভাবে {AD_REWARD} টাকা যোগ হয়েছে।", show_alert=True)
-        try:
-            await query.message.edit_text(success_msg, reply_markup=reply_markup, parse_mode="Markdown")
-        except:
-            pass
         return
 
     if query.data == "btn_setwallet":
