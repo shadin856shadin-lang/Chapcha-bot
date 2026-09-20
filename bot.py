@@ -3,6 +3,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import random
 import string
+from urllib.parse import quote
 from PIL import Image, ImageDraw, ImageFont
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -142,10 +143,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
+    # কিবোর্ড থেকে Set Wallet বাদ দিয়ে Balance অপশন সেট করা হলো
     keyboard = [
         ['💸 Withdraw', '🚀 Earn'],
-        ['👤 Account', '💳 Set Wallet'],
-        ['👥 Refer', '☎️ Support']
+        ['👤 Account', '💰 Balance'],
+        ['💳 Set Wallet', '☎️ Support']
     ]
     if user_id == ADMIN_ID:
         keyboard.append(['👑 Admin Panel'])
@@ -234,6 +236,38 @@ async def account_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
+async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    all_users.add(user_id)
+    
+    balance = user_balances.get(user_id, 0.0)
+    ref_count = user_referral_counts.get(user_id, 0)
+    bot_username = context.bot.username
+    refer_link = f"https://t.me/{bot_username}?start={user_id}"
+    
+    share_text = quote(f"ঘরে বসে সহজেই ক্যাপচা পূরণ করে টাকা ইনকাম করুন! আমার রেফারেল লিংক থেকে জয়েন করুন:\n{refer_link}")
+    share_url = f"https://t.me/share/url?url={quote(refer_link)}&text={share_text}"
+
+    text = (
+        f"👥 **রেফার করুন ও ইনকাম করুন**\n\n"
+        f"💰 **আপনার ব্যালেন্স:** {balance:.2f}৳\n"
+        f"👤 **মোট রেফার:** {ref_count} জন\n\n"
+        f"🔗 **আপনার রেফারেল লিংক:**\n`{refer_link}`\n\n"
+        f"📌 আপনি যাকে রেফার করবেন সে যদি Bot start করে তাহলে আপনি পাবেন ৫ টাকা।\n\n"
+        f"💸 **প্রতি রেফারে পাবেন ৫ টাকা**\n\n"
+        f"🔥 তাই বেশি ইনকাম করতে চাইলে বেশি বেশি রেফার করুন!"
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("📤 Share Link", url=share_url)]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.message:
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
 async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
@@ -267,21 +301,6 @@ async def setwallet_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg_text, reply_markup=reply_markup, parse_mode="Markdown")
     elif update.callback_query:
         await update.callback_query.message.reply_text(msg_text, reply_markup=reply_markup, parse_mode="Markdown")
-
-async def refer_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    all_users.add(user_id)
-    
-    bot_username = context.bot.username
-    refer_link = f"https://t.me/{bot_username}?start={user_id}"
-    ref_count = user_referral_counts.get(user_id, 0)
-    await update.message.reply_text(
-        f"👥 **রেফার করুন ও ইনকাম করুন**\n\n"
-        f"📊 **আপনার মোট রেফার:** {ref_count} জন\n\n"
-        f"🔗 **আপনার রেফারেল লিংক:**\n`{refer_link}`\n\n"
-        f"🎁 প্রতি রেফারে পাবেন **{REFER_BONUS} টাকা** বোনাস!",
-        parse_mode="Markdown"
-    )
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -347,6 +366,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['waiting_for_withdraw_amount'] = False
         await account_handler(update, context)
         return
+    elif text in ["💰 Balance", "Balance", "/balance"]:
+        context.user_data['waiting_for_wallet_input'] = None
+        context.user_data['waiting_for_withdraw_amount'] = False
+        await balance_handler(update, context)
+        return
     elif text in ["💸 Withdraw", "Withdraw", "/withdraw"]:
         context.user_data['waiting_for_wallet_input'] = None
         await withdraw_handler(update, context)
@@ -354,11 +378,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text in ["💳 Set Wallet", "Set Wallet", "/setwallet"]:
         context.user_data['waiting_for_withdraw_amount'] = False
         await setwallet_handler(update, context)
-        return
-    elif text in ["👥 Refer", "Refer", "/refer"]:
-        context.user_data['waiting_for_wallet_input'] = None
-        context.user_data['waiting_for_withdraw_amount'] = False
-        await refer_handler(update, context)
         return
     elif text in ["☎️ Support", "Support", "/support"]:
         context.user_data['waiting_for_wallet_input'] = None
@@ -548,9 +567,9 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
     app.add_handler(CommandHandler("account", account_handler))
+    app.add_handler(CommandHandler("balance", balance_handler))
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("setwallet", setwallet_handler))
-    app.add_handler(CommandHandler("refer", refer_handler))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
     app.add_handler(CommandHandler("activate", activate_user_command))
