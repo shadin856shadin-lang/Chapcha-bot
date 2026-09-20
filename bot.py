@@ -1295,7 +1295,7 @@ async def broadcast_command(update, context):
 # =========================================================
 
 def main():
-    token = os.getenv("BOT_TOKEN")
+    token = os.getenv("8948370050:AAFqFGKbyrZrFZ-fhdvPXhtd25GX3Nw_OcE")
 
     if not token:
         raise RuntimeError(
