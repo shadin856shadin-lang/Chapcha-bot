@@ -469,7 +469,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     
-    # টেলিগ্রামের লোডিং স্পিনিং (Connecting...) দূর করার জন্য সবার আগে এটি কল করা বাধ্যতামূলক
     try:
         await query.answer()
     except Exception:
@@ -487,6 +486,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        # এখানে নতুন মেসেজ হিসেবে পাঠানো হচ্ছে যাতে আগের উইন্ডো আটকে না থাকে
         await query.message.reply_text("💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         return
 
@@ -641,7 +641,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
-    app.add_handler(CommandHandler("activate", activate_user_command))
+    app.add_handler(CommandHandler.activate_user_command if "activate_user_command" in globals() else CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
