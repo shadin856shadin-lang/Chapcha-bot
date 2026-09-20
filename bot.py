@@ -197,8 +197,9 @@ async def earn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_captchas[user_id] = captcha_text
     img_path = generate_captcha_image(captcha_text)
     
+    target_msg = update.message if update.message else update.callback_query.message
     with open(img_path, 'rb') as photo:
-        await update.message.reply_photo(
+        await target_msg.reply_photo(
             photo=photo,
             caption="🖼 **উপরে ছবিতে থাকা কোডটি দেখে নিচে লিখে পাঠান:**"
         )
@@ -207,17 +208,15 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # এ্যাড কামিং সুন মেসেজ
     text = (
         "🚀 **Ad is coming soon!**\n\n"
         "খুব শীঘ্রই নতুন বিজ্ঞাপন যুক্ত করা হবে। ততদিন পর্যন্ত ক্যাপচা পূরণ করে এবং বন্ধুদের রেফার করে ইনকাম করুন।"
     )
     
-    if update.message:
-        await update.message.reply_text(text, parse_mode="Markdown")
-    elif update.callback_query:
+    target_msg = update.message if update.message else update.callback_query.message
+    if update.callback_query:
         await update.callback_query.answer("Ad is coming soon!", show_alert=True)
-        await update.callback_query.message.reply_text(text, parse_mode="Markdown")
+    await target_msg.reply_text(text, parse_mode="Markdown")
 
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -246,16 +245,15 @@ async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    if update.message:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-    elif update.callback_query:
-        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    target_msg = update.message if update.message else update.callback_query.message
+    await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
+    target_msg = update.message if update.message else update.callback_query.message
     
     if not wallet:
         balance = user_balances.get(user_id, 0.0)
@@ -282,9 +280,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        msg = update.message if update.message else update.callback_query.message
-        await msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+        await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
         return
 
     context.user_data['waiting_for_withdraw_amount'] = True
@@ -295,8 +291,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💳 To: {w_type}: {wallet}\n"
         f"📉 Minimum: {MIN_WITHDRAW:.2f}৳"
     )
-    msg = update.message if update.message else update.callback_query.message
-    await msg.reply_text(text, parse_mode="Markdown")
+    await target_msg.reply_text(text, parse_mode="Markdown")
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -308,7 +303,8 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👥 Support Group", url="https://t.me/Captchabotsupportgroup")]
     ]
     reply_markup = InlineKeyboardMarkup(support_keyboard)
-    await update.message.reply_text(
+    msg = update.message if update.message else update.callback_query.message
+    await msg.reply_text(
         "👨‍💻 **এডমিন সাপোর্ট ও কমিউনিটি প্যানেল:**\n\n"
         "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন অথবা আমাদের পেমেন্ট ও সাপোর্ট গ্রুপে যুক্ত থাকুন:",
         reply_markup=reply_markup,
@@ -337,14 +333,15 @@ async def admin_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         if data['status'] == "Processing":
             keyboard.append([InlineKeyboardButton(f"✅ Approve {uid} ({data['amount']}৳)", callback_data=f"app_{uid}")])
     
+    target_msg = update.message if update.message else update.callback_query.message
     if keyboard:
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(admin_text, reply_markup=reply_markup, parse_mode="Markdown")
+        await target_msg.reply_text(admin_text, reply_markup=reply_markup, parse_mode="Markdown")
     else:
-        await update.message.reply_text(admin_text, parse_mode="Markdown")
+        await target_msg.reply_text(admin_text, parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.chat.type != 'private':
+    if not update.message or update.message.chat.type != 'private':
         return
 
     user_id = update.effective_user.id
@@ -469,6 +466,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
     user_id = query.from_user.id
     
     if query.data == "check_join":
@@ -476,51 +478,63 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "btn_setwallet":
-        await query.answer()
         keyboard = [
             [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
             [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        try:
+            await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Error in btn_setwallet: {e}")
         return
 
     if query.data == "btn_withdraw_check":
-        await query.answer()
         wallet = user_wallets.get(user_id)
         if not wallet:
-            await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
+            try:
+                await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
+            except:
+                pass
             return
         context.user_data['waiting_for_withdraw_amount'] = True
         w_type = user_wallet_types.get(user_id, "Wallet")
-        await query.message.reply_text(
-            f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
-            f"💳 To: {w_type}: {wallet}\n"
-            f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
-            parse_mode="Markdown"
-        )
+        try:
+            await query.message.reply_text(
+                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+                f"💳 To: {w_type}: {wallet}\n"
+                f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Error in btn_withdraw_check: {e}")
         return
 
     if query.data == "wallet_bkash":
-        await query.answer()
         context.user_data['waiting_for_wallet_input'] = "bKash"
-        await query.message.reply_text("📱 আপনার বিকাশ নাম্বার লিখুন:", parse_mode="Markdown")
+        try:
+            await query.message.reply_text("📱 আপনার বিকাশ নাম্বার লিখুন:", parse_mode="Markdown")
+        except:
+            pass
         return
 
     if query.data == "wallet_nagad":
-        await query.answer()
         context.user_data['waiting_for_wallet_input'] = "Nagad"
-        await query.message.reply_text("🟠 আপনার নগদ নাম্বার লিখুন:", parse_mode="Markdown")
+        try:
+            await query.message.reply_text("🟠 আপনার নগদ নাম্বার লিখুন:", parse_mode="Markdown")
+        except:
+            pass
         return
 
     if query.data == "wallet_rocket":
-        await query.answer()
         context.user_data['waiting_for_wallet_input'] = "Rocket"
-        await query.message.reply_text("🟣 আপনার রকেট নাম্বার লিখুন:", parse_mode="Markdown")
+        try:
+            await query.message.reply_text("🟣 আপনার রকেট নাম্বার লিখুন:", parse_mode="Markdown")
+        except:
+            pass
         return
 
     if query.data.startswith("app_") and user_id == ADMIN_ID:
-        await query.answer()
         target_uid = int(query.data.split("_")[1])
         if target_uid in pending_withdrawals:
             pending_withdrawals[target_uid]['status'] = "Approved ✅"
@@ -539,17 +553,22 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 pass
             
-            await query.edit_message_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
+            try:
+                await query.edit_message_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
+            except:
+                pass
         return
 
-    await query.answer()
     if user_id != ADMIN_ID:
         return
 
     photo = context.user_data.get('pending_photo')
     caption = context.user_data.get('pending_caption', '')
     if not photo:
-        await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
+        try:
+            await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
+        except:
+            pass
         return
 
     target = GROUP_1 if query.data == "post_g1" else GROUP_2
@@ -557,7 +576,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
         await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
     except Exception as e:
-        await query.edit_message_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
+        try:
+            await query.edit_message_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
+        except:
+            pass
 
     context.user_data.pop('pending_photo', None)
     context.user_data.pop('pending_caption', None)
@@ -643,10 +665,13 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
-    app.add_handler(CommandHandler.activate if hasattr(CommandHandler, 'activate') else CommandHandler("activate", activate_user_command))
+    app.add_handler(CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
+    
+    # CallbackQueryHandler সবার উপরে রাখা হয়েছে যাতে ইনলাইন বাটন মিস না হয়
     app.add_handler(CallbackQueryHandler(callback_handler))
+    
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
     print("বট সফলভাবে চালু হচ্ছে...")
