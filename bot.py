@@ -207,7 +207,6 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # প্রতিবার নতুন অ্যাড লিংকের জন্য র্যান্ডম বা ডায়নামিক প্যারামিটার যোগ করা হয়েছে যাতে ইউজার প্রতিবার নতুন অ্যাড দেখতে পান
     ad_id = random.randint(1000, 9999)
     ad_url = f"https://t.me/captchaearnofficial?start=ad_{ad_id}"
 
@@ -488,7 +487,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "claim_ad_reward":
         user_balances[user_id] = user_balances.get(user_id, 0.0) + AD_REWARD
         
-        # নতুন অ্যাড দেখার জন্য বাটন তৈরি করা হলো যাতে ইউজার চাইলে আবার নতুন অ্যাড দেখতে পারেন
         next_ad_id = random.randint(10000, 99999)
         next_ad_url = f"https://t.me/captchaearnofficial?start=ad_{next_ad_id}"
         
@@ -498,7 +496,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # অভিনন্দন বার্তা এবং ৪ টাকা অ্যাকাউন্ট এ যোগ করার মেসেজ
         success_msg = (
             f"🎉 **অভিনন্দন!**\n\n"
             f"অ্যাড সফলভাবে দেখার জন্য আপনার অ্যাকাউন্টে **{AD_REWARD} টাকা** যোগ করা হয়েছে। 💰\n\n"
@@ -635,7 +632,7 @@ async def approve_withdraw_command(update: Update, context: ContextTypes.DEFAULT
         else:
             await update.message.reply_text("❌ এই ইউজারের কোনো পেন্ডিং উইথড্র নেই।")
     except:
-        await update.message.reply_text("❌ সঠিক ফরম্যাট: `/approve USER_ID`", parse_mode="Markdown")
+        await update.model.reply_text("❌ সঠিক ফরম্যাট: `/approve USER_ID`", parse_mode="Markdown")
 
 async def add_balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
