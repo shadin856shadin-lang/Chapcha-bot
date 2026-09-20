@@ -207,8 +207,8 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    ad_id = random.randint(1000, 9999)
-    ad_url = f"https://t.me/captchaearnofficial?start=ad_{ad_id}"
+    # আপনার তৈরি করা ShrinkMe শর্টনার লিংক এখানে যুক্ত করা হলো
+    ad_url = "https://shrinkme.click/ky3DS"
 
     keyboard = [
         [InlineKeyboardButton("🌐 Visit Sponsor Ad (৫-৬ সেকেন্ড দেখুন)", url=ad_url)],
@@ -487,8 +487,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "claim_ad_reward":
         user_balances[user_id] = user_balances.get(user_id, 0.0) + AD_REWARD
         
-        next_ad_id = random.randint(10000, 99999)
-        next_ad_url = f"https://t.me/captchaearnofficial?start=ad_{next_ad_id}"
+        # এখানেও রিওয়ার্ড ক্লেইমের পর নতুন বিজ্ঞাপনে ShrinkMe লিংক সেট করে দেওয়া হলো
+        next_ad_url = "https://shrinkme.click/ky3DS"
         
         keyboard = [
             [InlineKeyboardButton("🔄 আরেকটি নতুন অ্যাড দেখুন", url=next_ad_url)],
@@ -632,7 +632,7 @@ async def approve_withdraw_command(update: Update, context: ContextTypes.DEFAULT
         else:
             await update.message.reply_text("❌ এই ইউজারের কোনো পেন্ডিং উইথড্র নেই।")
     except:
-        await update.model.reply_text("❌ সঠিক ফরম্যাট: `/approve USER_ID`", parse_mode="Markdown")
+        await update.message.reply_text("❌ সঠিক ফরম্যাট: `/approve USER_ID`", parse_mode="Markdown")
 
 async def add_balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -677,7 +677,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
-    app.add_handler(CommandHandler("activate", activate_user_command))
+    app.add_handler(CommandHandler.activate if hasattr(CommandHandler, 'activate') else CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
