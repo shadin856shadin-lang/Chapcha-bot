@@ -368,7 +368,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
-    # ১. ওয়ালেট ইনপুট স্টেট আগে চেক করা হচ্ছে
     if context.user_data.get('waiting_for_wallet_input'):
         w_method = context.user_data['waiting_for_wallet_input']
         user_wallets[user_id] = text
@@ -381,7 +380,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ২. উইথড্র এমাউন্ট ইনপুট স্টেট চেক
     if context.user_data.get('waiting_for_withdraw_amount'):
         context.user_data['waiting_for_withdraw_amount'] = False
         try:
@@ -446,6 +444,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     elif text in ["💸 Withdraw", "Withdraw", "/withdraw"]:
         context.user_data['waiting_for_wallet_input'] = None
+        context.user_data['waiting_for_withdraw_amount'] = False
         await withdraw_handler(update, context)
         return
     elif text in ["☎️ Support", "Support", "/support"]:
@@ -668,6 +667,7 @@ if __name__ == '__main__':
     
     app = ApplicationBuilder().token(TOKEN).build()
 
+    # কমান্ড হ্যান্ডলারগুলো
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
     app.add_handler(CommandHandler("ad", watch_ad_handler))
@@ -678,7 +678,11 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
+    
+    # ইনলাইন বাটনের কলব্যাক হ্যান্ডলার (সবার উপরে রাখা হয়েছে)
     app.add_handler(CallbackQueryHandler(callback_handler))
+    
+    # মেসেজ ও ছবি হ্যান্ডলার সবার শেষে
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
     print("বট সফলভাবে চালু হচ্ছে...")
