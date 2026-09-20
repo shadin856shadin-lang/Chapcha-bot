@@ -1,10 +1,10 @@
 import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import random
 import string
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from PIL import Image, ImageDraw, ImageFont
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -42,6 +42,9 @@ GROUP_2 = "@captchaearnofficial"
 user_captchas = {}
 user_balances = {}
 user_wallets = {}
+user_wallet_types = {}
+user_total_withdrawn = {}
+user_referral_counts = {}
 user_is_active = {}
 referred_by = {}
 all_users = set()
@@ -102,14 +105,6 @@ async def send_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif update.callback_query:
         await update.callback_query.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
 
-# স্ক্রিনশটের স্টাইলে প্রফেশনাল ইনলাইন মেনু কিবোর্ড
-def get_main_menu_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚀 Get Number", callback_data="menu_earn"), InlineKeyboardButton("🌍 Available Country", callback_data="menu_country")],
-        [InlineKeyboardButton("📞 Support", callback_data="menu_support"), InlineKeyboardButton("💰 Balance", callback_data="menu_balance")],
-        [InlineKeyboardButton("💳 Withdraw", callback_data="menu_withdraw"), InlineKeyboardButton("🏆 Leaderboard", callback_data="menu_leaderboard")]
-    ])
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.chat.type != 'private':
         return
@@ -124,8 +119,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     all_users.add(user_id)
     if user_id not in user_balances:
-        user_balances[user_id] = 0
+        user_balances[user_id] = 0.0
         user_is_active[user_id] = False
+        user_total_withdrawn[user_id] = 0.0
+        user_referral_counts[user_id] = 0
 
     if context.args:
         try:
@@ -133,6 +130,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if referrer_id != user_id and referrer_id not in referred_by.get(user_id, []):
                 referred_by[user_id] = referrer_id
                 user_balances[referrer_id] = user_balances.get(referrer_id, 0) + REFER_BONUS
+                user_referral_counts[referrer_id] = user_referral_counts.get(referrer_id, 0) + 1
                 try:
                     await context.bot.send_message(
                         chat_id=referrer_id,
@@ -144,6 +142,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
+    keyboard = [
+        ['💸 Withdraw', '🚀 Earn'],
+        ['👤 Account', '💳 Set Wallet'],
+        ['👥 Refer', '☎️ Support']
+    ]
+    if user_id == ADMIN_ID:
+        keyboard.append(['👑 Admin Panel'])
+
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
     welcome_msg = (
         "⚡ **QuickCash Captcha Bot**\n"
         "----------------------------------------\n"
@@ -152,11 +160,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔔 সঠিক ক্যাপচায় ইনস্ট্যান্ট ব্যালেন্স যোগ হবে\n"
         "🎉 বন্ধুদের রেফার করে আকর্ষণীয় বোনাস পান\n"
         "----------------------------------------\n"
-        "⚡ **কাজ শুরু করতে নিচের মেনু থেকে অপশন বেছে নিন!**"
+        "⚡ **কাজ শুরু করতে নিচের অপশনগুলোতে ক্লিক করুন!**"
     )
 
     target_msg = update.message if update.message else update.callback_query.message
-    await target_msg.reply_text(welcome_msg, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+    await target_msg.reply_text(welcome_msg, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def verify_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -171,10 +179,10 @@ async def verify_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         await start(update, context)
     else:
-        await query.message.reply_text("❌ আপনি এখনো সবগুলোতে জয়েন করেননি! দয়া করে জয়েন হয়ে আবার **'I've Joined – Verify'** বাটনে ক্লিক করুন।", parse_mode="Markdown")
+        await query.message.reply_text("❌ আপনি এখনো সবগুলোতে জয়েন করেননি! দয়া করে জয়েন হয়ে আবার **'I've Joined – Verify'** বাটনে ক্লিক করুন.", parse_mode="Markdown")
 
-async def earn_handler(update_obj, context):
-    user_id = update_obj.effective_user.id
+async def earn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     all_users.add(user_id)
     
     captcha_text = generate_captcha_text()
@@ -182,92 +190,113 @@ async def earn_handler(update_obj, context):
     img_path = generate_captcha_image(captcha_text)
     
     with open(img_path, 'rb') as photo:
-        await update_obj.message.reply_photo(
+        await update.message.reply_photo(
             photo=photo,
-            caption="🖼 **উপরে ছবিতে থাকা কোডটি দেখে নিচে লিখে পাঠান:**",
-            reply_markup=get_main_menu_keyboard()
+            caption="🖼 **উপরে ছবিতে থাকা কোডটি দেখে নিচে লিখে পাঠান:**"
         )
 
-async def account_handler(update_obj, context):
-    user_id = update_obj.effective_user.id
+async def account_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     all_users.add(user_id)
     
-    balance = user_balances.get(user_id, 0)
+    balance = user_balances.get(user_id, 0.0)
     wallet = user_wallets.get(user_id, "সেট করা হয়নি")
+    w_type = user_wallet_types.get(user_id, "")
+    wallet_display = f"{w_type}: {wallet}" if wallet != "সেট করা হয়নি" else "সেট করা হয়নি"
+    total_w = user_total_withdrawn.get(user_id, 0.0)
+    ref_count = user_referral_counts.get(user_id, 0)
     status = "✅ অ্যাক্টিভ" if user_is_active.get(user_id, False) else "❌ ইনঅ্যাক্টিভ"
-    
+
     text = (
-        f"💰 **Wallet**\n\n"
+        f"💰 **Wallet**\n"
+        f"----------------------------------------\n"
         f"🆔 **User ID:** `{user_id}`\n"
-        f"💵 **Balance:** {balance} TK\n"
-        f"💳 **Wallet:** {wallet}\n"
+        f"----------------------------------------\n"
+        f"💵 **Balance:** {balance:.2f}৳\n"
+        f"----------------------------------------\n"
+        f"📤 **Total Withdrawn:** {total_w:.2f}৳\n"
+        f"----------------------------------------\n"
+        f"👥 **Referrals:** {ref_count} জন\n"
+        f"----------------------------------------\n"
+        f"🎁 **Refer Reward:** {REFER_BONUS:.2f}৳\n"
+        f"----------------------------------------\n"
+        f"🏧 **Minimum Withdraw:** {MIN_WITHDRAW:.2f}৳\n"
+        f"----------------------------------------\n"
+        f"⚡ **Fee:** Free 0%\n"
+        f"----------------------------------------\n"
+        f"💳 **Wallet:** {wallet_display}\n"
         f"📊 **Status:** {status}"
     )
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 Set Wallet", callback_data="menu_setwallet"), InlineKeyboardButton("🏧 Withdraw", callback_data="menu_withdraw")]
-    ])
-    await update_obj.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
 
-async def withdraw_handler(update_obj, context):
-    user_id = update_obj.effective_user.id
+    keyboard = [
+        [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
     if not wallet:
-        await update_obj.message.reply_text("❌ আপনার বিকাশ/নগদ নাম্বার সেট করা নেই! আগে নাম্বার সেট করুন।", reply_markup=get_main_menu_keyboard())
+        await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে 'Set Wallet' থেকে নাম্বার সেট করুন।")
         return
 
-    balance = user_balances.get(user_id, 0)
     context.user_data['waiting_for_withdraw_amount'] = True
-    await update_obj.message.reply_text(
-        f"🏧 **মিনিমাম উইথড্র: {MIN_WITHDRAW} TK**\n"
-        f"💰 **আপনার বর্তমান ব্যালেন্স:** {balance} TK\n\n"
-        f"কত টাকা উইথড্র করতে চান? এমাউন্টটি লিখে পাঠান:",
-        parse_mode="Markdown"
+    text = (
+        f"📤 **আপনি কত টাকা উত্তোলন করতে চান?**\n\n"
+        f"🏧 **Minimum Withdraw:** {MIN_WITHDRAW} TK\n\n"
+        f"সঠিক এমাউন্টটি লিখে পাঠান:"
     )
+    msg = update.message if update.message else update.callback_query.message
+    await msg.reply_text(text, parse_mode="Markdown")
 
-async def setwallet_handler(update_obj, context):
-    user_id = update_obj.effective_user.id
+async def setwallet_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     all_users.add(user_id)
     
-    context.user_data['waiting_for_wallet'] = True
-    current_wallet = user_wallets.get(user_id, "সেট করা হয়নি")
-    await update_obj.message.reply_text(
-        f"📱 **বর্তমান বিকাশ/নগদ নাম্বার:** `{current_wallet}`\n\n"
-        f"আপনার সঠিক বিকাশ অথবা নগদ নাম্বারটি লিখে পাঠান:",
-        parse_mode="Markdown"
-    )
+    keyboard = [
+        [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
+        [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    msg_text = "💳 **দয়া করে আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**"
+    if update.message:
+        await update.message.reply_text(msg_text, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(msg_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-async def refer_handler(update_obj, context):
-    user_id = update_obj.effective_user.id
+async def refer_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     all_users.add(user_id)
     
     bot_username = context.bot.username
     refer_link = f"https://t.me/{bot_username}?start={user_id}"
-    text = (
+    ref_count = user_referral_counts.get(user_id, 0)
+    await update.message.reply_text(
         f"👥 **রেফার করুন ও ইনকাম করুন**\n\n"
+        f"📊 **আপনার মোট রেফার:** {ref_count} জন\n\n"
         f"🔗 **আপনার রেফারেল লিংক:**\n`{refer_link}`\n\n"
-        f"🎁 প্রতি রেফারে পাবেন **{REFER_BONUS} টাকা** বোনাস!"
+        f"🎁 প্রতি রেফারে পাবেন **{REFER_BONUS} টাকা** বোনাস!",
+        parse_mode="Markdown"
     )
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Share Link", url=f"https://t.me/share/url?url={refer_link}")]])
-    await update_obj.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
 
-async def support_handler(update_obj, context):
-    support_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{ADMIN_USERNAME}")],
-        [InlineKeyboardButton("👨‍💻 Contact Developer", url=f"https://t.me/{ADMIN_USERNAME}")]
-    ])
-    await update_obj.message.reply_text("👨‍💻 **এডমিন সাপোর্ট প্যানেল:**\n\nযেকোনো সমস্যায় সরাসরি যোগাযোগ করুন:", reply_markup=support_keyboard, parse_mode="Markdown")
-
-async def leaderboard_handler(update_obj, context):
-    text = (
-        "🏆 **Daily Leaderboard – Today Top 10**\n"
-        "----------------------------------------\n"
-        "১. Admin — 69 OTP — 69.00৳\n"
-        "২. User2 — 64 OTP — 64.00৳\n"
-        "৩. User3 — 9 OTP — 9.00৳"
+async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    all_users.add(user_id)
+    
+    support_keyboard = [
+        [InlineKeyboardButton("💬 Contact Admin", url=f"https://t.me/{ADMIN_USERNAME}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(support_keyboard)
+    await update.message.reply_text(
+        "👨‍💻 **এডমিন সাপোর্ট প্যানেল:**\n\n"
+        "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন:",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
     )
-    await update_obj.message.reply_text(text, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
 
 async def admin_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -283,7 +312,7 @@ async def admin_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         "2. ব্যালেন্স দিতে: `/addbalance USER_ID AMOUNT`\n"
         "3. ব্রডকাস্ট করতে: `/broadcast মেসেজ`"
     )
-    await update.message.reply_text(admin_text, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+    await update.message.reply_text(admin_text, parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.type != 'private':
@@ -308,140 +337,147 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
-    if text in ["Earn", "/earn"]:
-        context.user_data['waiting_for_wallet'] = False
+    if text in ["🚀 Earn", "Earn", "/earn"]:
+        context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await earn_handler(update, context)
         return
-    elif text in ["Account", "/account"]:
-        context.user_data['waiting_for_wallet'] = False
+    elif text in ["👤 Account", "Account", "/account"]:
+        context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await account_handler(update, context)
         return
-    elif text in ["Withdraw", "/withdraw"]:
-        context.user_data['waiting_for_wallet'] = False
+    elif text in ["💸 Withdraw", "Withdraw", "/withdraw"]:
+        context.user_data['waiting_for_wallet_input'] = None
         await withdraw_handler(update, context)
         return
-    elif text in ["Set Wallet", "/setwallet"]:
+    elif text in ["💳 Set Wallet", "Set Wallet", "/setwallet"]:
         context.user_data['waiting_for_withdraw_amount'] = False
         await setwallet_handler(update, context)
         return
-    elif text in ["Refer", "/refer"]:
-        context.user_data['waiting_for_wallet'] = False
+    elif text in ["👥 Refer", "Refer", "/refer"]:
+        context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await refer_handler(update, context)
         return
-    elif text in ["Support", "/support"]:
-        context.user_data['waiting_for_wallet'] = False
+    elif text in ["☎️ Support", "Support", "/support"]:
+        context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await support_handler(update, context)
         return
-    elif text in ["Admin Panel", "/admin"] and user_id == ADMIN_ID:
-        context.user_data['waiting_for_wallet'] = False
+    elif text in ["👑 Admin Panel", "Admin Panel", "/admin"] and user_id == ADMIN_ID:
+        context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await admin_panel_handler(update, context)
         return
 
-    if context.user_data.get('waiting_for_wallet'):
+    if context.user_data.get('waiting_for_wallet_input'):
+        w_method = context.user_data['waiting_for_wallet_input']
         user_wallets[user_id] = text
-        context.user_data['waiting_for_wallet'] = False
-        await update.message.reply_text(f"✅ আপনার বিকাশ/নগদ নাম্বার সফলভাবে সেট করা হয়েছে: `{text}`", reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+        user_wallet_types[user_id] = w_method
+        context.user_data['waiting_for_wallet_input'] = None
+        await update.message.reply_text(
+            f"✅ **আপনার নাম্বার সফলভাবে যোগ করা হয়েছে। এখন আপনি withdraw করতে পারেন।**\n\n"
+            f"পেমেন্ট মাধ্যম: {w_method}\n"
+            f"নাম্বার: `{text}`",
+            parse_mode="Markdown"
+        )
         return
 
     if context.user_data.get('waiting_for_withdraw_amount'):
         context.user_data['waiting_for_withdraw_amount'] = False
         try:
             amount = float(text)
-            balance = user_balances.get(user_id, 0)
+            balance = user_balances.get(user_id, 0.0)
             wallet = user_wallets.get(user_id)
 
             if not wallet:
-                await update.message.reply_text("❌ আপনার বিকাশ/নগদ নাম্বার সেট করা নেই! আগে 'Set Wallet' থেকে নাম্বার দিন।", reply_markup=get_main_menu_keyboard())
+                await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে 'Set Wallet' থেকে নাম্বার দিন।")
                 return
 
             if amount < MIN_WITHDRAW or amount > balance:
-                await update.message.reply_text("❌ আপনার অ্যাকাউন্টে পর্যাপ্ত টাকা নাই অথবা মিনিমাম উইথড্র ৫০ টাকা।", reply_markup=get_main_menu_keyboard())
+                await update.message.reply_text("❌ আপনার পর্যাপ্ত ব্যালেন্স নাই অনুগ্রহ করে রেফার বা ক্যাপচা পুরন করে withdraw করেন।", parse_mode="Markdown")
                 return
 
             is_active = user_is_active.get(user_id, False)
             if not is_active:
                 msg = (
-                    "⚠️ **আইডি ইনঅ্যাক্টিভ!**\n\n"
-                    "আপনার অ্যাকাউন্টটি এখনো ইনঅ্যাক্টিভ রয়েছে। টাকা উইথড্র করতে হলে আপনার অ্যাকাউন্টটি একবার অ্যাক্টিভ করতে হবে। একবার অ্যাক্টিভ করলে পরবর্তীতে আর কখনো ফি লাগবে না。\n\n"
-                    "আইডি অ্যাক্টিভ করার জন্য **৩০ টাকা** নিচের বিকাশ/নগদ নাম্বারে সেন্ড মানি করুন:\n\n"
-                    f"📱 **বিকাশ/নগদ নাম্বার:** `{ADMIN_BKASH}`\n\n"
-                    "টাকা পাঠানোর পর ট্রানজেকশন আইডি (TrxID) সহ সাপোর্ট অপশন থেকে এডমিনকে জানান।"
+                    f"❌ **আপনার আইডি একটিভ নয়।**\n\n"
+                    f"আইডি একটিভ করতে নিচের `{ADMIN_BKASH}` নাম্বারে সেন্ড মানি করুন **৩০ টাকা**।\n\n"
+                    f"টাকা পাঠানোর পর ট্রানজেকশন আইডি সহ সাপোর্ট অপশন থেকে এডমিনকে জানান।"
                 )
-                await update.message.reply_text(msg, reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+                await update.message.reply_text(msg, parse_mode="Markdown")
                 return
 
             user_balances[user_id] = balance - amount
+            user_total_withdrawn[user_id] = user_total_withdrawn.get(user_id, 0.0) + amount
+            w_type = user_wallet_types.get(user_id, "bKash")
             await update.message.reply_text(
                 f"✅ **উইথড্র রিকোয়েস্ট সফল হয়েছে!**\n\n"
                 f"উইথড্র এমাউন্ট: {amount} TK\n"
-                f"বিকাশ/নগদ নাম্বার: `{wallet}`\n"
+                f"মাধ্যম: {w_type}\n"
+                f"নাম্বার: `{wallet}`\n"
                 f"খুব শীঘ্রই আপনার নাম্বারে পেমেন্ট পৌঁছে যাবে।",
-                reply_markup=get_main_menu_keyboard(),
                 parse_mode="Markdown"
             )
         except ValueError:
-            await update.message.reply_text("❌ সঠিক সংখ্যায় এমাউন্ট লিখে পাঠান (যেমন: 50 বা 100)।", reply_markup=get_main_menu_keyboard())
+            await update.message.reply_text("❌ সঠিক সংখ্যায় এমাউন্ট লিখে পাঠান (যেমন: 50 বা 100)।")
         return
 
     if user_id in user_captchas:
         correct_captcha = user_captchas[user_id]
         if text.upper() == correct_captcha.upper():
-            user_balances[user_id] = user_balances.get(user_id, 0) + 2
+            user_balances[user_id] = user_balances.get(user_id, 0.0) + 2.0
             del user_captchas[user_id]
-            await update.message.reply_text("✅ **সঠিক হয়েছে! ২ টাকা আপনার অ্যাকাউন্টে যোগ হয়েছে।**", reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+            await update.message.reply_text("✅ **সঠিক হয়েছে! ২ টাকা আপনার অ্যাকাউন্টে যোগ হয়েছে।**", parse_mode="Markdown")
         else:
-            await update.message.reply_text("❌ **ভুল ক্যাপচা! আবার চেষ্টা করুন।**", reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
+            await update.message.reply_text("❌ **ভুল ক্যাপচা! আবার চেষ্টা করুন।**", parse_mode="Markdown")
         return
 
-    await update.message.reply_text("দয়া করে নিচের মেনু থেকে কোনো একটি অপশন বেছে নিন।", reply_markup=get_main_menu_keyboard())
+    await update.message.reply_text("দয়া করে নিচের মেনু থেকে কোনো একটি অপশন বেছে নিন।")
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    user_id = query.from_user.id
     
     if query.data == "check_join":
         await verify_button(update, context)
         return
 
-    # ইনলাইন মেনু বাটন হ্যান্ডলিং
-    if query.data.startswith("menu_"):
+    if query.data == "btn_setwallet":
         await query.answer()
-        action = query.data.replace("menu_", "")
-        
-        # ডামি মেসেজ অবজেক্ট তৈরি যাতে আগের ফাংশনগুলো কাজ করে
-        class FakeMessage:
-            def __init__(self, msg):
+        await setwallet_handler(update, context)
+        return
+
+    if query.data == "btn_withdraw":
+        await query.answer()
+        class FakeUpdate:
+            def __init__(self, msg, user):
                 self.message = msg
-                self.effective_user = query.from_user
-            async def reply_text(self, *args, **kwargs):
-                return await self.message.reply_text(*args, **kwargs)
-            async def reply_photo(self, *args, **kwargs):
-                return await self.message.reply_photo(*args, **kwargs)
+                self.effective_user = user
+        await withdraw_handler(FakeUpdate(query.message, query.from_user), context)
+        return
 
-        fake_update = FakeMessage(query.message)
+    if query.data == "wallet_bkash":
+        await query.answer()
+        context.user_data['waiting_for_wallet_input'] = "bKash"
+        await query.message.reply_text("📱 আপনার সঠিক বিকাশ নাম্বার দিন:", parse_mode="Markdown")
+        return
 
-        if action == "earn":
-            await earn_handler(fake_update, context)
-        elif action == "country":
-            await query.message.reply_text("🌍 **Available Countries:**\n- Bangladesh (Available)\n- India (Available)", reply_markup=get_main_menu_keyboard(), parse_mode="Markdown")
-        elif action == "support":
-            await support_handler(fake_update, context)
-        elif action == "balance":
-            await account_handler(fake_update, context)
-        elif action == "withdraw":
-            await withdraw_handler(fake_update, context)
-        elif action == "leaderboard":
-            await leaderboard_handler(fake_update, context)
-        elif action == "setwallet":
-            await setwallet_handler(fake_update, context)
+    if query.data == "wallet_nagad":
+        await query.answer()
+        context.user_data['waiting_for_wallet_input'] = "Nagad"
+        await query.message.reply_text("🟠 আপনার সঠিক nagad নাম্বার দিন:", parse_mode="Markdown")
+        return
+
+    if query.data == "wallet_rocket":
+        await query.answer()
+        context.user_data['waiting_for_wallet_input'] = "Rocket"
+        await query.message.reply_text("🟣 আপনার সঠিক rocket নাম্বার দিন:", parse_mode="Markdown")
         return
 
     await query.answer()
-    if query.from_user.id != ADMIN_ID:
+    if user_id != ADMIN_ID:
         return
 
     photo = context.user_data.get('pending_photo')
@@ -468,7 +504,7 @@ async def activate_user_command(update: Update, context: ContextTypes.DEFAULT_TY
         user_is_active[target_id] = True
         await update.message.reply_text(f"✅ ইউজার `{target_id}`-এর আইডি সফলভাবে অ্যাক্টিভ করা হয়েছে।", parse_mode="Markdown")
         try:
-            await context.bot.send_message(chat_id=target_id, text="🎉 **অভিনন্দন! আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ করা হয়েছে। এখন থেকে আপনি উইথড্র করতে পারবেন।**")
+            await context.bot.send_message(chat_id=target_id, text="🎉 **অভিনন্দন! আপনার অ্যাকাউন্ট সফলভাবে অ্যাক্টিভ করা হয়েছে। এখন থেকে আপনি উইথড্র করতে পারবেন।**", parse_mode="Markdown")
         except: pass
     except:
         await update.message.reply_text("❌ সঠিক ফরম্যাট: `/activate USER_ID`", parse_mode="Markdown")
@@ -479,7 +515,7 @@ async def add_balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         target_id = int(context.args[0])
         amount = float(context.args[1])
-        user_balances[target_id] = user_balances.get(target_id, 0) + amount
+        user_balances[target_id] = user_balances.get(target_id, 0.0) + amount
         await update.message.reply_text(f"✅ ইউজার `{target_id}`-কে {amount} TK দেওয়া হয়েছে।", parse_mode="Markdown")
         try:
             await context.bot.send_message(chat_id=target_id, text=f"💰 আপনার অ্যাকাউন্টে **{amount} টাকা** যোগ করা হয়েছে।", parse_mode="Markdown")
@@ -510,17 +546,17 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("earn", lambda u, c: earn_handler(u, c)))
-    app.add_handler(CommandHandler("account", lambda u, c: account_handler(u, c)))
-    app.add_handler(CommandHandler("withdraw", lambda u, c: withdraw_handler(u, c)))
-    app.add_handler(CommandHandler("setwallet", lambda u, c: setwallet_handler(u, c)))
-    app.add_handler(CommandHandler("refer", lambda u, c: refer_handler(u, c)))
-    app.add_handler(CommandHandler("support", lambda u, c: support_handler(u, c)))
+    app.add_handler(CommandHandler("earn", earn_handler))
+    app.add_handler(CommandHandler("account", account_handler))
+    app.add_handler(CommandHandler("withdraw", withdraw_handler))
+    app.add_handler(CommandHandler("setwallet", setwallet_handler))
+    app.add_handler(CommandHandler("refer", refer_handler))
+    app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
     app.add_handler(CommandHandler("activate", activate_user_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
-    print("প্রফেশনাল ডিজাইনসহ বট সফলভাবে চালু হচ্ছে...")
+    print("বট সফলভাবে চালু হচ্ছে...")
     app.run_polling(drop_pending_updates=True)
