@@ -144,7 +144,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
-    # নিচের মেনু থেকে Set Wallet বাটনটি সম্পূর্ণ বাদ দেওয়া হয়েছে
     if user_id == ADMIN_ID:
         keyboard = [
             ['💸 Withdraw', '🚀 Capcha Earn'],
@@ -241,7 +240,10 @@ async def set_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if query:
-        await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        try:
+            await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
+        except:
+            pass
     elif update.message:
         await update.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
 
@@ -465,16 +467,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     user_id = query.from_user.id
-    
-    if query.data == "check_join":
+    data = query.data
+
+    if data == "check_join":
         await verify_button(update, context)
         return
 
-    if query.data == "btn_setwallet":
+    if data == "btn_setwallet":
         await set_wallet_menu(update, context)
         return
 
-    if query.data == "btn_withdraw_check":
+    if data == "btn_withdraw_check":
         wallet = user_wallets.get(user_id)
         if not wallet:
             try:
@@ -496,7 +499,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"Error in btn_withdraw_check: {e}")
         return
 
-    if query.data == "wallet_bkash":
+    if data == "wallet_bkash":
         context.user_data['waiting_for_wallet_input'] = "bKash"
         try:
             await query.message.reply_text("📱 আপনার বিকাশ নাম্বার লিখুন:", parse_mode="Markdown")
@@ -504,7 +507,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
-    if query.data == "wallet_nagad":
+    if data == "wallet_nagad":
         context.user_data['waiting_for_wallet_input'] = "Nagad"
         try:
             await query.message.reply_text("🟠 আপনার নগদ নাম্বার লিখুন:", parse_mode="Markdown")
@@ -512,7 +515,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
-    if query.data == "wallet_rocket":
+    if data == "wallet_rocket":
         context.user_data['waiting_for_wallet_input'] = "Rocket"
         try:
             await query.message.reply_text("🟣 আপনার রকেট নাম্বার লিখুন:", parse_mode="Markdown")
@@ -520,8 +523,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
-    if query.data.startswith("app_") and user_id == ADMIN_ID:
-        target_uid = int(query.data.split("_")[1])
+    if data.startswith("app_") and user_id == ADMIN_ID:
+        target_uid = int(data.split("_")[1])
         if target_uid in pending_withdrawals:
             pending_withdrawals[target_uid]['status'] = "Approved ✅"
             amt = pending_withdrawals[target_uid]['amount']
@@ -557,7 +560,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
 
-    target = GROUP_1 if query.data == "post_g1" else GROUP_2
+    target = GROUP_1 if data == "post_g1" else GROUP_2
     try:
         await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
         await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
@@ -659,7 +662,7 @@ if __name__ == '__main__':
     
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # হ্যান্ডলারগুলো সঠিক অর্ডারে রেজিস্টার করা হলো
+    # সমস্ত ইনলাইন এবং মেসেজ হ্যান্ডলার সঠিকভাবে অর্গানাইজ করা হলো
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
