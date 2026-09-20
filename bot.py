@@ -176,7 +176,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def verify_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     user_id = query.from_user.id
 
     is_joined = await check_membership(user_id, context)
@@ -215,7 +214,6 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(text, parse_mode="Markdown")
     elif update.callback_query:
-        await update.callback_query.answer("Ad is coming soon!", show_alert=True)
         await update.callback_query.message.reply_text(text, parse_mode="Markdown")
 
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -471,6 +469,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     
+    # টেলিগ্রামের লোডিং স্পিনিং (Connecting...) দূর করার জন্য সবার আগে এটি কল করা বাধ্যতামূলক
     try:
         await query.answer()
     except Exception:
