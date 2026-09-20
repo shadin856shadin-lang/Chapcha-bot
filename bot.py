@@ -36,7 +36,6 @@ ADMIN_BKASH = "01705351616"
 ADMIN_USERNAME = "Ownertanvir99"
 REFER_BONUS = 5.0
 MIN_WITHDRAW = 50.0
-AD_REWARD = 4.0
 
 GROUP_1 = "@Captchabotsupportgroup"
 GROUP_2 = "@captchaearnofficial"
@@ -262,25 +261,25 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ref_reward_total = ref_count * REFER_BONUS
         
         text = (
-            f"Wallet\n"
+            f"💳 **Wallet Panel**\n"
             f"-----------------------\n"
             f"User ID: `{user_id}`\n\n"
-            f"Balance: {balance:.2f}৳\n\n"
-            f"Total Withdrawn: {total_w:.2f}৳\n\n"
-            f"Referrals: {ref_count}\n\n"
+            f"Balance: {balance:.2f}৳\n"
+            f"Total Withdrawn: {total_w:.2f}৳\n"
+            f"Referrals: {ref_count}\n"
             f"Refer Reward: {ref_reward_total:.2f}৳\n"
             f"---------------------------------\n"
-            f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n\n"
+            f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n"
             f"⚡ Fee: Free 0%\n"
             f"-----------------------------------\n"
-            f"Wallet: সেট করা হয়নি"
+            f"Wallet: ❌ সেট করা হয়নি"
         )
 
         keyboard = [
-            [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
+            [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet")],
+            [InlineKeyboardButton("💸 Withdraw Money", callback_data="btn_withdraw_check")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
         return
 
@@ -293,7 +292,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     text = (
-        f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+        f"💵 **আপনি কত টাকা withdraw করতে চান?**\n\n"
         f"💳 To: {w_type}: {wallet}\n"
         f"📉 Minimum: {MIN_WITHDRAW:.2f}৳"
     )
@@ -391,7 +390,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             wallet = user_wallets.get(user_id)
 
             if not wallet:
-                await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে Withdraw বাটনে ক্লিক করে নাম্বার দিন।")
+                await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে 'Set Wallet' বাটনে ক্লিক করে নাম্বার দিন।")
                 return
 
             if amount < MIN_WITHDRAW or amount > balance:
@@ -420,7 +419,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
 
             await update.message.reply_text(
-                f"⏳ **দয়া করে অপেক্ষা করুন।**\n\n"
+                f"⏳ **উইথড্র রিকোয়েস্ট সফল হয়েছে।**\n\n"
                 f"💸 এমাউন্ট: {amount} TK\n"
                 f"💳 নাম্বার: `{wallet}`\n"
                 f"📊 স্ট্যাটাস: **Processing...**",
@@ -474,13 +473,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    user_id = query.from_user.id
     
     try:
         await query.answer()
     except Exception:
         pass
 
+    user_id = query.from_user.id
     data = query.data
 
     if data == "check_join":
@@ -507,7 +506,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallet = user_wallets.get(user_id)
         if not wallet:
             try:
-                await query.message.reply_text("❌ আগে '💳 Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
+                await query.message.reply_text("❌ আপনার ওয়ালেট নাম্বার সেট করা নেই! আগে '💳 Set Wallet' এ ক্লিক করে নাম্বার দিন।")
             except:
                 pass
             return
@@ -522,7 +521,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         try:
             await query.message.reply_text(
-                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+                f"💵 **আপনি কত টাকা withdraw করতে চান?**\n\n"
                 f"💳 To: {w_type}: {wallet}\n"
                 f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
                 reply_markup=reply_markup,
@@ -559,19 +558,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pending_withdrawals[target_uid]['status'] = "Approved ✅"
             amt = pending_withdrawals[target_uid]['amount']
             wlt = pending_withdrawals[target_uid]['wallet']
-            
             try:
                 await context.bot.send_message(
                     chat_id=target_uid,
-                    text=f"🎉 **আপনার উইথড্র রিকোয়েস্ট সফলভাবে এপ্রুভ করা হয়েছে!**\n\n"
-                         f"💸 এমাউন্ট: {amt} TK\n"
-                         f"💳 মাধ্যম: {wlt}\n"
-                         f"📊 স্ট্যাটাস: **Approved ✅**\n\n"
-                         f"খুব শীঘ্রই আপনার নাম্বার চেক করুন."
+                    text=f"🎉 **আপনার উইথড্র রিকোয়েস্ট সফলভাবে এপ্রুভ করা হয়েছে!**\n\n💸 এমাউন্ট: {amt} TK\n💳 মাধ্যম: {wlt}\n📊 স্ট্যাটাস: **Approved ✅**"
                 )
             except:
                 pass
-            
             try:
                 await query.message.reply_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
             except:
@@ -597,7 +590,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.message.reply_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
             except:
                 pass
-
         context.user_data.pop('pending_photo', None)
         context.user_data.pop('pending_caption', None)
         return
