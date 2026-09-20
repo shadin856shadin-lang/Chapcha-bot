@@ -36,7 +36,7 @@ ADMIN_BKASH = "01705351616"
 ADMIN_USERNAME = "Ownertanvir99"
 REFER_BONUS = 5.0
 MIN_WITHDRAW = 50.0
-AD_REWARD = 4.0  # আপাতত এ্যাড বন্ধ রাখা হয়েছে
+AD_REWARD = 4.0
 
 GROUP_1 = "@Captchabotsupportgroup"
 GROUP_2 = "@captchaearnofficial"
@@ -149,13 +149,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             ['💸 Withdraw', '🚀 Capcha Earn'],
             ['📢 Watch Ad', '💰 Balance'],
-            ['☎️ Support', '👑 Admin Panel']
+            ['💳 Set Wallet', '☎️ Support'],
+            ['👑 Admin Panel']
         ]
     else:
         keyboard = [
             ['💸 Withdraw', '🚀 Capcha Earn'],
             ['📢 Watch Ad', '💰 Balance'],
-            ['☎️ Support']
+            ['💳 Set Wallet', '☎️ Support']
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -247,6 +248,15 @@ async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     target_msg = update.message if update.message else update.callback_query.message
     await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
+async def set_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
+        [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    msg = update.message if update.message else update.callback_query.message
+    await msg.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
 
 async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -378,6 +388,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['waiting_for_wallet_input'] = None
         await withdraw_handler(update, context)
         return
+    elif text in ["💳 Set Wallet", "Set Wallet", "/setwallet"]:
+        context.user_data['waiting_for_withdraw_amount'] = False
+        await set_wallet_menu(update, context)
+        return
     elif text in ["☎️ Support", "Support", "/support"]:
         context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
@@ -409,7 +423,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             wallet = user_wallets.get(user_id)
 
             if not wallet:
-                await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে Withdraw বাটনে ক্লিক করে নাম্বার দিন।")
+                await update.message.reply_text("❌ আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করা নেই! আগে Set Wallet বাটনে ক্লিক করে নাম্বার দিন।")
                 return
 
             if amount < MIN_WITHDRAW or amount > balance:
@@ -474,15 +488,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "btn_setwallet":
-        keyboard = [
-            [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
-            [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Error in btn_setwallet: {e}")
+        await set_wallet_menu(update, context)
         return
 
     if query.data == "btn_withdraw_check":
@@ -501,7 +507,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
                 f"💳 To: {w_type}: {wallet}\n"
                 f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
-                parse_mode="Markdown"
+                parse_Mode="Markdown"
             )
         except Exception as e:
             print(f"Error in btn_withdraw_check: {e}")
@@ -660,6 +666,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("ad", watch_ad_handler))
     app.add_handler(CommandHandler("balance", balance_handler))
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
+    app.add_handler(CommandHandler("setwallet", set_wallet_menu))
     app.add_handler(CommandHandler("support", support_handler))
     app.add_handler(CommandHandler("addbalance", add_balance_command))
     app.add_handler(CommandHandler("activate", activate_user_command))
