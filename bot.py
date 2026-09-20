@@ -144,18 +144,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
-    # ছবি অনুযায়ী Set Wallet বাদ দিয়ে ৬টি অপশন রাখা হয়েছে (3 rows x 2 columns)
-    keyboard = [
-        ['💸 Withdraw', '🚀 Earn'],
-        ['👤 Account', '💰 Balance'],
-        ['☎️ Support', '👑 Admin Panel'] if user_id == ADMIN_ID else [('☎️ Support')]
-    ]
-    # যদি এডমিন না হয় তবে Support একা থাকবে রো-তে
-    if user_id != ADMIN_ID:
+    # Account এবং Set Wallet বাদ দিয়ে বাকি অপশনগুলো রাখা হলো
+    if user_id == ADMIN_ID:
         keyboard = [
             ['💸 Withdraw', '🚀 Earn'],
-            ['👤 Account', '💰 Balance'],
-            ['☎️ Support']
+            ['💰 Balance', '☎️ Support'],
+            ['👑 Admin Panel']
+        ]
+    else:
+        keyboard = [
+            ['💸 Withdraw', '🚀 Earn'],
+            ['💰 Balance', '☎️ Support']
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -203,39 +202,6 @@ async def earn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="🖼 **উপরে ছবিতে থাকা কোডটি দেখে নিচে লিখে পাঠান:**"
         )
 
-async def account_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    all_users.add(user_id)
-    
-    balance = user_balances.get(user_id, 0.0)
-    wallet = user_wallets.get(user_id, "সেট করা হয়নি")
-    w_type = user_wallet_types.get(user_id, "")
-    wallet_display = f"{w_type}: {wallet}" if wallet != "সেট করা হয়নি" else "সেট করা হয়নি"
-    total_w = user_total_withdrawn.get(user_id, 0.0)
-    ref_count = user_referral_counts.get(user_id, 0)
-    ref_reward_total = ref_count * REFER_BONUS
-
-    text = (
-        f"Wallet\n"
-        f"-----------------------\n"
-        f"User ID: `{user_id}`\n\n"
-        f"Balance: {balance:.2f}৳\n\n"
-        f"Total Withdrawn: {total_w:.2f}৳\n\n"
-        f"Referrals: {ref_count}\n\n"
-        f"Refer Reward: {ref_reward_total:.2f}৳\n"
-        f"---------------------------------\n"
-        f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n\n"
-        f"⚡ Fee: Free 0%\n"
-        f"-----------------------------------\n"
-        f"Wallet: {wallet_display}"
-    )
-
-    keyboard = [
-        [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
@@ -273,19 +239,39 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
-    # যদি ওয়ালেট বা নাম্বার সেট করা না থাকে, তবে পেমেন্ট সিস্টেম সিলেক্ট করার অপশন দেখাবে
+    
+    # যদি ওয়ালেট নাম্বার সেট করা না থাকে, তবে আগের Account ইনফরমেশন সহ নিচে Set Wallet ও Withdraw বাটন দেখাবে
     if not wallet:
+        balance = user_balances.get(user_id, 0.0)
+        total_w = user_total_withdrawn.get(user_id, 0.0)
+        ref_count = user_referral_counts.get(user_id, 0)
+        ref_reward_total = ref_count * REFER_BONUS
+        
+        text = (
+            f"Wallet\n"
+            f"-----------------------\n"
+            f"User ID: `{user_id}`\n\n"
+            f"Balance: {balance:.2f}৳\n\n"
+            f"Total Withdrawn: {total_w:.2f}৳\n\n"
+            f"Referrals: {ref_count}\n\n"
+            f"Refer Reward: {ref_reward_total:.2f}৳\n"
+            f"---------------------------------\n"
+            f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n\n"
+            f"⚡ Fee: Free 0%\n"
+            f"-----------------------------------\n"
+            f"Wallet: সেট করা হয়নি"
+        )
+
         keyboard = [
-            [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
-            [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
+            [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        msg_text = "💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**"
         
         msg = update.message if update.message else update.callback_query.message
-        await msg.reply_text(msg_text, reply_markup=reply_markup, parse_mode="Markdown")
+        await msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
         return
 
+    # নাম্বার সেট করা থাকলে সরাসরি উইথড্র এমাউন্ট চাওয়ার অপশন আসবে
     context.user_data['waiting_for_withdraw_amount'] = True
     w_type = user_wallet_types.get(user_id, "Wallet")
     
@@ -367,11 +353,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await earn_handler(update, context)
-        return
-    elif text in ["👤 Account", "Account", "/account"]:
-        context.user_data['waiting_for_wallet_input'] = None
-        context.user_data['waiting_for_withdraw_amount'] = False
-        await account_handler(update, context)
         return
     elif text in ["💰 Balance", "Balance", "/balance"]:
         context.user_data['waiting_for_wallet_input'] = None
@@ -474,21 +455,28 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "btn_setwallet":
         await query.answer()
-        # যদি Account পেজ থেকে Set Wallet এ চাপ দেয়, তবে Withdraw ফাংশন কল হবে যেখানে ওয়ালেট সিলেক্ট করা যাবে
-        class FakeUpdate:
-            def __init__(self, msg, user):
-                self.message = msg
-                self.effective_user = user
-        await withdraw_handler(FakeUpdate(query.message, query.from_user), context)
+        keyboard = [
+            [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
+            [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         return
 
-    if query.data == "btn_withdraw":
+    if query.data == "btn_withdraw_check":
         await query.answer()
-        class FakeUpdate:
-            def __init__(self, msg, user):
-                self.message = msg
-                self.effective_user = user
-        await withdraw_handler(FakeUpdate(query.message, query.from_user), context)
+        wallet = user_wallets.get(user_id)
+        if not wallet:
+            await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
+            return
+        context.user_data['waiting_for_withdraw_amount'] = True
+        w_type = user_wallet_types.get(user_id, "Wallet")
+        await query.message.reply_text(
+            f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+            f"💳 To: {w_type}: {wallet}\n"
+            f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
+            parse_mode="Markdown"
+        )
         return
 
     if query.data == "wallet_bkash":
@@ -524,7 +512,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                          f"💸 এমাউন্ট: {amt} TK\n"
                          f"💳 মাধ্যম: {wlt}\n"
                          f"📊 স্ট্যাটাস: **Approved ✅**\n\n"
-                         f"খুব শীঘ্রই আপনার নাম্বার চেক করুন।"
+                         f"খুব শীঘ্রই আপনার নাম্বার চেক করুন."
                 )
             except:
                 pass
@@ -628,7 +616,6 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
-    app.add_handler(CommandHandler("account", account_handler))
     app.add_handler(CommandHandler("balance", balance_handler))
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
