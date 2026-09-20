@@ -243,28 +243,12 @@ async def set_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    if query:
-        try:
-            await query.edit_message_text(
-                text="💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**",
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            try:
-                await query.message.reply_text(
-                    text="💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
-            except:
-                pass
-    elif update.message:
-        await update.message.reply_text(
-            text="💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**",
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
+    target_msg = query.message if query else update.message
+    await target_msg.reply_text(
+        text="💳 **আপনার পেমেন্ট মাধ্যম সিলেক্ট করুন:**",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
 
 async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
