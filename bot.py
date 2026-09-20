@@ -207,7 +207,6 @@ async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # এ্যাড কামিং সুন মেসেজ
     text = (
         "🚀 **Ad is coming soon!**\n\n"
         "খুব শীঘ্রই নতুন বিজ্ঞাপন যুক্ত করা হবে। ততদিন পর্যন্ত ক্যাপচা পূরণ করে এবং বন্ধুদের রেফার করে ইনকাম করুন।"
@@ -471,12 +470,18 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     
-    if query.data == "check_join":
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    data = query.data
+
+    if data == "check_join":
         await verify_button(update, context)
         return
 
-    if query.data == "btn_setwallet":
-        await query.answer()
+    if data == "btn_setwallet":
         keyboard = [
             [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
             [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
@@ -485,8 +490,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("💳 **আপনার পেমেন্ট সিস্টেম সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         return
 
-    if query.data == "btn_withdraw_check":
-        await query.answer()
+    if data == "btn_withdraw_check":
         wallet = user_wallets.get(user_id)
         if not wallet:
             await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
@@ -501,27 +505,23 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if query.data == "wallet_bkash":
-        await query.answer()
+    if data == "wallet_bkash":
         context.user_data['waiting_for_wallet_input'] = "bKash"
         await query.message.reply_text("📱 আপনার বিকাশ নাম্বার লিখুন:", parse_mode="Markdown")
         return
 
-    if query.data == "wallet_nagad":
-        await query.answer()
+    if data == "wallet_nagad":
         context.user_data['waiting_for_wallet_input'] = "Nagad"
         await query.message.reply_text("🟠 আপনার নগদ নাম্বার লিখুন:", parse_mode="Markdown")
         return
 
-    if query.data == "wallet_rocket":
-        await query.answer()
+    if data == "wallet_rocket":
         context.user_data['waiting_for_wallet_input'] = "Rocket"
         await query.message.reply_text("🟣 আপনার রকেট নাম্বার লিখুন:", parse_mode="Markdown")
         return
 
-    if query.data.startswith("app_") and user_id == ADMIN_ID:
-        await query.answer()
-        target_uid = int(query.data.split("_")[1])
+    if data.startswith("app_") and user_id == ADMIN_ID:
+        target_uid = int(data.split("_")[1])
         if target_uid in pending_withdrawals:
             pending_withdrawals[target_uid]['status'] = "Approved ✅"
             amt = pending_withdrawals[target_uid]['amount']
@@ -542,7 +542,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
         return
 
-    await query.answer()
     if user_id != ADMIN_ID:
         return
 
@@ -552,7 +551,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
         return
 
-    target = GROUP_1 if query.data == "post_g1" else GROUP_2
+    target = GROUP_1 if data == "post_g1" else GROUP_2
     try:
         await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
         await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
