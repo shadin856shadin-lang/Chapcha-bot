@@ -36,6 +36,7 @@ ADMIN_BKASH = "01705351616"
 ADMIN_USERNAME = "Ownertanvir99"
 REFER_BONUS = 5.0
 MIN_WITHDRAW = 50.0
+AD_REWARD = 4.0  # প্রতি অ্যাড দেখার জন্য ৪ টাকা রিওয়ার্ড
 
 GROUP_1 = "@Captchabotsupportgroup"
 GROUP_2 = "@captchaearnofficial"
@@ -146,14 +147,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id == ADMIN_ID:
         keyboard = [
-            ['💸 Withdraw', '🚀 Earn'],
-            ['💰 Balance', '☎️ Support'],
-            ['👑 Admin Panel']
+            ['💸 Withdraw', '🚀 Capcha Earn'],
+            ['📢 Watch Ad', '💰 Balance'],
+            ['☎️ Support', '👑 Admin Panel']
         ]
     else:
         keyboard = [
-            ['💸 Withdraw', '🚀 Earn'],
-            ['💰 Balance', '☎️ Support']
+            ['💸 Withdraw', '🚀 Capcha Earn'],
+            ['📢 Watch Ad', '💰 Balance'],
+            ['☎️ Support']
         ]
 
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -162,8 +164,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚡ **QuickCash Captcha Bot**\n"
         "----------------------------------------\n"
         f"🔒 **Welcome, {user_name}!**\n\n"
-        "✅ ঘরে বসে সহজে ক্যাপচা টাইপ করে ইনকাম করুন\n"
-        "🔔 সঠিক ক্যাপচায় ইনস্ট্যান্ট ব্যালেন্স যোগ হবে\n"
+        "✅ ঘরে বসে সহজে ক্যাপচা ও এড দেখে ইনকাম করুন\n"
+        "🔔 সঠিক ক্যাপচা বা এড ভিউয়ে ইনস্ট্যান্ট ব্যালেন্স যোগ হবে\n"
         "🎉 বন্ধুদের রেফার করে আকর্ষণীয় বোনাস পান\n"
         "----------------------------------------\n"
         "⚡ **কাজ শুরু করতে নিচের অপশনগুলোতে ক্লিক করুন!**"
@@ -201,6 +203,32 @@ async def earn_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="🖼 **উপরে ছবিতে থাকা কোডটি দেখে নিচে লিখে পাঠান:**"
         )
 
+async def watch_ad_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    all_users.add(user_id)
+    
+    # প্রতিবার নতুন অ্যাড লিংকের জন্য র্যান্ডম বা ডায়নামিক প্যারামিটার যোগ করা হয়েছে যাতে ইউজার প্রতিবার নতুন অ্যাড দেখতে পান
+    ad_id = random.randint(1000, 9999)
+    ad_url = f"https://t.me/captchaearnofficial?start=ad_{ad_id}"
+
+    keyboard = [
+        [InlineKeyboardButton("🌐 Visit Sponsor Ad (৫-৬ সেকেন্ড দেখুন)", url=ad_url)],
+        [InlineKeyboardButton("✅ Claim Ad Reward", callback_data="claim_ad_reward")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    text = (
+        "📢 **স্পন্সর বিজ্ঞাপন (Ad)**\n\n"
+        "১. নিচের **'Visit Sponsor Ad'** বাটনে ক্লিক করে লিংকে অন্তত **৫ থেকে ৬ সেকেন্ড** অপেক্ষা করুন।\n"
+        "২. সময় শেষ হলে ফিরে এসে নিচের **'Claim Ad Reward'** বাটনে ক্লিক করুন।\n\n"
+        f"🎁 প্রতি সফল এড ভিউয়ে পাবেন: **{AD_REWARD} টাকা**"
+    )
+    
+    if update.message:
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+
 async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
@@ -210,7 +238,7 @@ async def balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bot_username = context.bot.username
     refer_link = f"https://t.me/{bot_username}?start={user_id}"
     
-    share_text = quote(f"ঘরে বসে সহজেই ক্যাপচা পূরণ করে টাকা ইনকাম করুন! আমার রেফারেল লিংক থেকে জয়েন করুন:\n{refer_link}")
+    share_text = quote(f"ঘরে বসে সহজেই ক্যাপচা ও এড দেখে টাকা ইনকাম করুন! আমার রেফারেল লিংক থেকে জয়েন করুন:\n{refer_link}")
     share_url = f"https://t.me/share/url?url={quote(refer_link)}&text={share_text}"
 
     text = (
@@ -284,7 +312,6 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # সঠিক নামসহ সাপোর্ট এবং পেমেন্ট গ্রুপের বাটন সেট করা হলো
     support_keyboard = [
         [InlineKeyboardButton("💬 Contact Admin", url=f"https://t.me/{ADMIN_USERNAME}")],
         [InlineKeyboardButton("💳 Payment Group", url="https://t.me/captchaearnofficial")],
@@ -349,10 +376,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.strip()
 
-    if text in ["🚀 Earn", "Earn", "/earn"]:
+    if text in ["🚀 Capcha Earn", "Capcha Earn", "Earn", "/earn"]:
         context.user_data['waiting_for_wallet_input'] = None
         context.user_data['waiting_for_withdraw_amount'] = False
         await earn_handler(update, context)
+        return
+    elif text in ["📢 Watch Ad", "Watch Ad", "/ad"]:
+        context.user_data['waiting_for_wallet_input'] = None
+        context.user_data['waiting_for_withdraw_amount'] = False
+        await watch_ad_handler(update, context)
         return
     elif text in ["💰 Balance", "Balance", "/balance"]:
         context.user_data['waiting_for_wallet_input'] = None
@@ -398,7 +430,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             if amount < MIN_WITHDRAW or amount > balance:
-                await update.message.reply_text("❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নাই।", parse_mode="Markdown")
+                await update.message.reply_text("❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নাই বা সর্বনিম্ন উইথড্র এমাউন্ট হয়নি।", parse_mode="Markdown")
                 return
 
             is_active = user_is_active.get(user_id, False)
@@ -407,7 +439,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"❌ **আপনার একাউন্ট একটিভ নয়।**\n\n"
                     f"একাউন্ট একটিভ করবার জন্য নিচের দেওয়া নাম্বারে **৩০ টাকা** সেন্ড মানি করুন:\n"
                     f"📱 `{ADMIN_BKASH}` (বিকাশ/নগদ)\n\n"
-                    f"টাকা পাঠিয়ে স্কিনশট এবং ট্রানজেকশন আইডি টি এডমিন এর ইনবক্সে দিন। এডমিন আপনার একাউন্ট একটিভ করার পর আপনি উইথড্র করতে পারবেন।"
+                    f"টাকা পাঠিয়ে স্কিনশট এবং ট্রানজেকশন আইডি এডমিন এর ইনবক্সে দিন। এডমিন একাউন্ট একটিভ করার পর উইথড্র করতে পারবেন।"
                 )
                 await update.message.reply_text(msg, parse_mode="Markdown")
                 return
@@ -451,6 +483,33 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "check_join":
         await verify_button(update, context)
+        return
+
+    if query.data == "claim_ad_reward":
+        user_balances[user_id] = user_balances.get(user_id, 0.0) + AD_REWARD
+        
+        # নতুন অ্যাড দেখার জন্য বাটন তৈরি করা হলো যাতে ইউজার চাইলে আবার নতুন অ্যাড দেখতে পারেন
+        next_ad_id = random.randint(10000, 99999)
+        next_ad_url = f"https://t.me/captchaearnofficial?start=ad_{next_ad_id}"
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 আরেকটি নতুন অ্যাড দেখুন", url=next_ad_url)],
+            [InlineKeyboardButton("✅ আবার Claim করুন", callback_data="claim_ad_reward")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        # অভিনন্দন বার্তা এবং ৪ টাকা অ্যাকাউন্ট এ যোগ করার মেসেজ
+        success_msg = (
+            f"🎉 **অভিনন্দন!**\n\n"
+            f"অ্যাড সফলভাবে দেখার জন্য আপনার অ্যাকাউন্টে **{AD_REWARD} টাকা** যোগ করা হয়েছে। 💰\n\n"
+            f"👇 আবার নতুন অ্যাড দেখতে চাইলে নিচের বাটনে ক্লিক করুন:"
+        )
+        
+        await query.answer(f"🎉 অভিনন্দন! সফলভাবে {AD_REWARD} টাকা যোগ হয়েছে।", show_alert=True)
+        try:
+            await query.message.edit_text(success_msg, reply_markup=reply_markup, parse_mode="Markdown")
+        except:
+            pass
         return
 
     if query.data == "btn_setwallet":
@@ -616,6 +675,7 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
+    app.add_handler(CommandHandler("ad", watch_ad_handler))
     app.add_handler(CommandHandler("balance", balance_handler))
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
