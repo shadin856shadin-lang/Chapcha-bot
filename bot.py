@@ -91,15 +91,15 @@ async def check_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def send_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("📢 Join Channel / Group 1", url=f"https://t.me/{GROUP_1.replace('@', '')}")],
-        [InlineKeyboardButton("📢 Join Channel / Group 2", url=f"https://t.me/{GROUP_2.replace('@', '')}")],
+        [InlineKeyboardButton("📢 Join Support Group", url="https://t.me/Captchabotsupportgroup")],
+        [InlineKeyboardButton("📢 Join Payment Group", url="https://t.me/captchaearnofficial")],
         [InlineKeyboardButton("✅ I've Joined – Verify", callback_data="check_join")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     msg = (
         "⚡ **QuickCash Captcha Bot**\n"
         "----------------------------------------\n"
-        "🔒 **বটে কাজ করতে হলে নিচের চ্যানেলগুলোতে জয়েন করুন!**\n\n"
+        "🔒 **বটে কাজ করতে হলে নিচের গ্রুপগুলোতে জয়েন করুন!**\n\n"
         "📢 জয়েন করার পর নিচের অফিসিয়াল **'I've Joined – Verify'** বাটনে ক্লিক করুন।"
     )
     if update.message:
@@ -284,16 +284,16 @@ async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     all_users.add(user_id)
     
-    # এডমিন আইডি এবং আপনার দেওয়া দুটি গ্রুপের লিংক সহ সাপোর্ট বাটনসমূহ
+    # সঠিক নামসহ সাপোর্ট এবং পেমেন্ট গ্রুপের বাটন সেট করা হলো
     support_keyboard = [
         [InlineKeyboardButton("💬 Contact Admin", url=f"https://t.me/{ADMIN_USERNAME}")],
-        [InlineKeyboardButton("📢 Official Channel", url="https://t.me/captchaearnofficial")],
+        [InlineKeyboardButton("💳 Payment Group", url="https://t.me/captchaearnofficial")],
         [InlineKeyboardButton("👥 Support Group", url="https://t.me/Captchabotsupportgroup")]
     ]
     reply_markup = InlineKeyboardMarkup(support_keyboard)
     await update.message.reply_text(
         "👨‍💻 **এডমিন সাপোর্ট ও কমিউনিটি প্যানেল:**\n\n"
-        "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন অথবা আমাদের অফিশিয়াল গ্রুপ ও চ্যানেলে যুক্ত থাকুন:",
+        "যেকোনো সমস্যায় সরাসরি এডমিনের সাথে যোগাযোগ করুন অথবা আমাদের পেমেন্ট ও সাপোর্ট গ্রুপে যুক্ত থাকুন:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
