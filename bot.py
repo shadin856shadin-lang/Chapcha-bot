@@ -447,7 +447,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"💸 এমাউন্ট: {amount} TK\n"
                 f"💳 নাম্বার: `{wallet}`\n"
                 f"📊 স্ট্যাটাস: **Processing...**",
-                parse_Mode="Markdown"
+                parse_mode="Markdown"
             )
         except ValueError:
             await update.message.reply_text("❌ সঠিক সংখ্যায় এমাউন্ট লিখে পাঠান (যেমন: 50 বা 100)।")
@@ -487,17 +487,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            await query.edit_message_text(
-                "💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", 
-                reply_markup=reply_markup, 
-                parse_mode="Markdown"
-            )
-        except Exception:
             await query.message.reply_text(
                 "💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", 
                 reply_markup=reply_markup, 
                 parse_mode="Markdown"
             )
+        except Exception:
+            pass
         return
 
     elif data == "btn_withdraw_check":
@@ -514,14 +510,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         try:
-            await query.edit_message_text(
-                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
-                f"💳 To: {w_type}: {wallet}\n"
-                f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
-            )
-        except Exception:
             await query.message.reply_text(
                 f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
                 f"💳 To: {w_type}: {wallet}\n"
@@ -529,6 +517,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
                 parse_mode="Markdown"
             )
+        except Exception:
+            pass
         return
 
     elif data == "btn_back_wallet":
@@ -569,22 +559,25 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 pass
             
-            await query.edit_message_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
+            try:
+                await query.message.reply_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
+            except:
+                pass
         return
 
     elif data in ["post_g1", "post_g2"] and user_id == ADMIN_ID:
         photo = context.user_data.get('pending_photo')
         caption = context.user_data.get('pending_caption', '')
         if not photo:
-            await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
+            await query.message.reply_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
             return
 
         target = GROUP_1 if data == "post_g1" else GROUP_2
         try:
             await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
-            await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
+            await query.message.reply_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
         except Exception as e:
-            await query.edit_message_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
+            await query.message.reply_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
 
         context.user_data.pop('pending_photo', None)
         context.user_data.pop('pending_caption', None)
