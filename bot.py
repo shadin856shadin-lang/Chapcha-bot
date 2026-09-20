@@ -26,9 +26,8 @@ from telegram.ext import (
 # CONFIG
 # =========================================================
 
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
-
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "Ownertanvir99")
+ADMIN_ID = 8262339619  # আপনার টেলিগ্রাম আইডি
+ADMIN_USERNAME = "Ownertanvir99"  # @ ছাড়া ইউজারনেম
 
 GROUP_1 = os.getenv("GROUP_1", "@Captchabotsupportgroup")
 GROUP_2 = os.getenv("GROUP_2", "@captchaearnofficial")
@@ -38,11 +37,10 @@ CAPTCHA_REWARD = 2.0
 MIN_WITHDRAW = 50.0
 
 PORT = int(os.getenv("PORT", "10000"))
-
 DB_FILE = "bot.db"
 
 # =========================================================
-# MINI WEB SERVER FOR HOSTING
+# MINI WEB SERVER FOR HOSTING (Render etc.)
 # =========================================================
 
 class SimpleHandler(BaseHTTPRequestHandler):
@@ -323,11 +321,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     ensure_user(user_id)
 
-    # Referral
+    # Referral handling
     if context.args:
         try:
             referrer_id = int(context.args[0])
-
             current = get_user(user_id)
 
             if (
@@ -335,7 +332,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 and current["referred_by"] is None
             ):
                 ensure_user(referrer_id)
-
                 referrer = get_user(referrer_id)
 
                 update_user(
@@ -385,7 +381,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ ক্যাপচা পূরণ করে রিওয়ার্ড সংগ্রহ করুন\n"
         "🎉 বন্ধুদের রেফার করে বোনাস পান\n"
         "💰 ব্যালেন্স ও withdrawal status দেখুন\n\n"
-        "⚡ *কাজ শুরু করতে নিচের অপশন নির্বাচন করুন।*"
+        "⚡ *কাজ শুরু করতে নিচের অপশন নির্বাচন করুন.ன்*"
     )
 
     target = update.message or update.callback_query.message
@@ -409,7 +405,6 @@ async def earn_handler(update, context):
     user_captchas[user_id] = captcha
 
     path = generate_captcha_image(captcha, user_id)
-
     target = update.message or update.callback_query.message
 
     try:
@@ -452,9 +447,7 @@ async def balance_handler(update, context):
     user = get_user(user_id)
     bot_username = context.bot.username
 
-    refer_link = (
-        f"https://t.me/{bot_username}?start={user_id}"
-    )
+    refer_link = f"https://t.me/{bot_username}?start={user_id}"
 
     share_text = quote(
         "ঘরে বসে সহজে CAPTCHA reward সংগ্রহ করুন! "
@@ -503,7 +496,6 @@ async def withdraw_handler(update, context):
     ensure_user(user_id)
 
     user = get_user(user_id)
-
     wallet_display = "সেট করা হয়নি"
 
     if user["wallet_number"]:
@@ -593,7 +585,6 @@ async def support_handler(update, context):
 
 async def admin_panel_handler(update, context):
     user_id = update.effective_user.id
-
     if user_id != ADMIN_ID:
         return
 
@@ -638,10 +629,9 @@ async def handle_message(update, context):
     user_id = update.effective_user.id
     ensure_user(user_id)
 
-    # Admin photo
+    # Admin photo broadcast handler
     if update.message.photo and user_id == ADMIN_ID:
         caption = update.message.caption or "Payment proof / update"
-
         context.user_data["pending_photo"] = (
             update.message.photo[-1].file_id
         )
@@ -673,83 +663,49 @@ async def handle_message(update, context):
 
     text = update.message.text.strip()
 
-    # Menu buttons
-    if text in [
-        "🚀 Capcha Earn",
-        "Capcha Earn",
-        "Earn",
-        "/earn",
-    ]:
+    # Menu clicks
+    if text in ["🚀 Capcha Earn", "Capcha Earn", "Earn", "/earn"]:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await earn_handler(update, context)
         return
 
-    if text in [
-        "📢 Watch Ad",
-        "Watch Ad",
-        "/ad",
-    ]:
+    if text in ["📢 Watch Ad", "Watch Ad", "/ad"]:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await watch_ad_handler(update, context)
         return
 
-    if text in [
-        "💰 Balance",
-        "Balance",
-        "/balance",
-    ]:
+    if text in ["💰 Balance", "Balance", "/balance"]:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await balance_handler(update, context)
         return
 
-    if text in [
-        "💸 Withdraw",
-        "Withdraw",
-        "/withdraw",
-    ]:
+    if text in ["💸 Withdraw", "Withdraw", "/withdraw"]:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await withdraw_handler(update, context)
         return
 
-    if text in [
-        "☎️ Support",
-        "Support",
-        "/support",
-    ]:
+    if text in ["☎️ Support", "Support", "/support"]:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await support_handler(update, context)
         return
 
-    if (
-        text in [
-            "👑 Admin Panel",
-            "Admin Panel",
-            "/admin",
-        ]
-        and user_id == ADMIN_ID
-    ):
+    if text in ["👑 Admin Panel", "Admin Panel", "/admin"] and user_id == ADMIN_ID:
         context.user_data["waiting_for_wallet_input"] = None
         context.user_data["waiting_for_withdraw_amount"] = False
         await admin_panel_handler(update, context)
         return
 
-    # Wallet input
-    wallet_method = context.user_data.get(
-        "waiting_for_wallet_input"
-    )
-
+    # Wallet input step
+    wallet_method = context.user_data.get("waiting_for_wallet_input")
     if wallet_method:
         wallet_number = text.replace(" ", "")
 
-        if (
-            not wallet_number.isdigit()
-            or len(wallet_number) != 11
-        ):
+        if not wallet_number.isdigit() or len(wallet_number) != 11:
             await update.message.reply_text(
                 "❌ সঠিক ১১ সংখ্যার মোবাইল নাম্বার দিন।"
             )
@@ -772,7 +728,7 @@ async def handle_message(update, context):
         )
         return
 
-    # Withdraw amount
+    # Withdraw amount step
     if context.user_data.get("waiting_for_withdraw_amount"):
         context.user_data["waiting_for_withdraw_amount"] = False
 
@@ -801,12 +757,10 @@ async def handle_message(update, context):
         if user["balance"] < amount:
             await update.message.reply_text(
                 f"❌ আপনার পর্যাপ্ত ব্যালেন্স নেই।\n\n"
-                f"💰 বর্তমান ব্যালেন্স: "
-                f"{user['balance']:.2f}৳"
+                f"💰 বর্তমান ব্যালেন্স: {user['balance']:.2f}৳"
             )
             return
 
-        # Admin activation is controlled by the admin command.
         if not user["is_active"]:
             await update.message.reply_text(
                 "⏳ আপনার account এখনো withdrawal-এর জন্য "
@@ -815,7 +769,6 @@ async def handle_message(update, context):
             )
             return
 
-        # Deduct and create withdrawal
         new_balance = user["balance"] - amount
         new_total = user["total_withdrawn"] + amount
 
@@ -855,7 +808,6 @@ async def handle_message(update, context):
             parse_mode="Markdown",
         )
 
-        # Notify admin
         try:
             await context.bot.send_message(
                 chat_id=ADMIN_ID,
@@ -874,7 +826,7 @@ async def handle_message(update, context):
 
         return
 
-    # CAPTCHA answer
+    # Captcha verification step
     if user_id in user_captchas:
         correct = user_captchas[user_id]
 
@@ -922,14 +874,10 @@ async def callback_handler(update, context):
     user_id = query.from_user.id
     data = query.data
 
-    print(f"Callback: {data} | User: {user_id}")
-
-    # Join verification
     if data == "check_join":
         await verify_button(update, context)
         return
 
-    # Set wallet
     if data == "btn_setwallet":
         keyboard = [
             [
@@ -959,35 +907,28 @@ async def callback_handler(update, context):
 
     if data == "wallet_bkash":
         context.user_data["waiting_for_wallet_input"] = "bKash"
-
         await query.message.reply_text(
-            "📱 আপনার *bKash number* লিখুন:\n\n"
-            "উদাহরণ: `017XXXXXXXX`",
+            "📱 আপনার *bKash number* লিখুন:\n\nউদাহরণ: `017XXXXXXXX`",
             parse_mode="Markdown",
         )
         return
 
     if data == "wallet_nagad":
         context.user_data["waiting_for_wallet_input"] = "Nagad"
-
         await query.message.reply_text(
-            "📱 আপনার *Nagad number* লিখুন:\n\n"
-            "উদাহরণ: `017XXXXXXXX`",
+            "📱 আপনার *Nagad number* লিখুন:\n\nউদাহরণ: `017XXXXXXXX`",
             parse_mode="Markdown",
         )
         return
 
     if data == "wallet_rocket":
         context.user_data["waiting_for_wallet_input"] = "Rocket"
-
         await query.message.reply_text(
-            "📱 আপনার *Rocket number* লিখুন:\n\n"
-            "উদাহরণ: `017XXXXXXXX`",
+            "📱 আপনার *Rocket number* লিখুন:\n\nউদাহরণ: `017XXXXXXXX`",
             parse_mode="Markdown",
         )
         return
 
-    # Withdraw
     if data == "btn_process_withdraw":
         user = get_user(user_id)
 
@@ -1020,7 +961,6 @@ async def callback_handler(update, context):
         )
         return
 
-    # Admin success
     if data.startswith("succ_") and user_id == ADMIN_ID:
         try:
             withdrawal_id = int(data.split("_", 1)[1])
@@ -1076,15 +1016,12 @@ async def callback_handler(update, context):
 
         return
 
-    # Admin photo posting
     if user_id == ADMIN_ID:
         photo = context.user_data.get("pending_photo")
         caption = context.user_data.get("pending_caption", "")
 
         if not photo:
-            await query.message.reply_text(
-                "❌ ছবি পাওয়া যায়নি।"
-            )
+            await query.message.reply_text("❌ ছবি পাওয়া যায়নি।")
             return
 
         if data == "post_g1":
@@ -1100,11 +1037,9 @@ async def callback_handler(update, context):
                 photo=photo,
                 caption=caption,
             )
-
             await query.edit_message_text(
                 "✅ সফলভাবে গ্রুপে পোস্ট করা হয়েছে!"
             )
-
         except Exception as e:
             await query.edit_message_text(
                 f"❌ পোস্ট করতে সমস্যা হয়েছে:\n{e}"
@@ -1127,9 +1062,7 @@ async def verify_button(update, context):
             await query.message.delete()
         except Exception:
             pass
-
         await start(update, context)
-
     else:
         await query.message.reply_text(
             "❌ আপনি এখনো সবগুলো group-এ join করেননি।\n"
@@ -1240,7 +1173,7 @@ async def success_withdraw_command(update, context):
 
     await update.message.reply_text(
         f"✅ Request `{withdrawal_id}` সফল করা হয়েছে।",
-        parse_mode="Markdown",
+        parse_Mode="Markdown",
     )
 
     try:
@@ -1265,15 +1198,11 @@ async def broadcast_command(update, context):
         return
 
     msg = " ".join(context.args).strip()
-
     if not msg:
-        await update.message.reply_text(
-            "❌ মেসেজ লিখুন।"
-        )
+        await update.message.reply_text("❌ মেসেজ লিখুন।")
         return
 
     count = 0
-
     for uid in get_all_user_ids():
         try:
             await context.bot.send_message(
@@ -1295,23 +1224,12 @@ async def broadcast_command(update, context):
 # =========================================================
 
 def main():
-    token = os.getenv("8948370050:AAFqFGKbyrZrFZ-fhdvPXhtd25GX3Nw_OcE")
+    token = "8948370050:AAFqFGKbyrZrFZ-fhdvPXhtd25GX3Nw_OcE"
 
     if not token:
-        raise RuntimeError(
-            "BOT_TOKEN environment variable সেট করা হয়নি।"
-        )
+        raise RuntimeError("BOT_TOKEN environment variable সেট করা হয়নি।")
 
-    if not ADMIN_ID:
-        raise RuntimeError(
-            "ADMIN_ID environment variable সেট করা হয়নি।"
-        )
-
-    app = (
-        ApplicationBuilder()
-        .token(token)
-        .build()
-    )
+    app = ApplicationBuilder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
@@ -1320,53 +1238,21 @@ def main():
     app.add_handler(CommandHandler("withdraw", withdraw_handler))
     app.add_handler(CommandHandler("support", support_handler))
 
-    app.add_handler(
-        CommandHandler(
-            "activate",
-            activate_user_command,
-        )
-    )
+    app.add_handler(CommandHandler("activate", activate_user_command))
+    app.add_handler(CommandHandler("addbalance", add_balance_command))
+    app.add_handler(CommandHandler("success", success_withdraw_command))
+    app.add_handler(CommandHandler("broadcast", broadcast_command))
 
-    app.add_handler(
-        CommandHandler(
-            "addbalance",
-            add_balance_command,
-        )
-    )
-
-    app.add_handler(
-        CommandHandler(
-            "success",
-            success_withdraw_command,
-        )
-    )
-
-    app.add_handler(
-        CommandHandler(
-            "broadcast",
-            broadcast_command,
-        )
-    )
-
-    # IMPORTANT: CallbackQueryHandler handles
-    # Set Wallet / Withdraw inline buttons.
-    app.add_handler(
-        CallbackQueryHandler(callback_handler)
-    )
-
+    app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(
         MessageHandler(
-            filters.PHOTO
-            | (filters.TEXT & ~filters.COMMAND),
+            filters.PHOTO | (filters.TEXT & ~filters.COMMAND),
             handle_message,
         )
     )
 
     print("QuickCash Captcha Bot is running...")
-
-    app.run_polling(
-        drop_pending_updates=True
-    )
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
