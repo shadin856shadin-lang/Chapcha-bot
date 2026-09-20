@@ -101,7 +101,7 @@ async def send_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚡ **QuickCash Captcha Bot**\n"
         "----------------------------------------\n"
         "🔒 **বটে কাজ করতে হলে নিচের গ্রুপগুলোতে জয়েন করুন!**\n\n"
-        "📢 জয়েন করার পর নিচের অফিসিয়াল **'I've Joined – Verify'** বাটনে ক্লিক করুন।"
+        "📢 জয়েন করার পর নিচের অফিসিয়াল **'I've Joined – Verify'** বাটনে ক্লিক করুন."
     )
     if update.message:
         await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
@@ -255,43 +255,39 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     wallet = user_wallets.get(user_id)
     target_msg = update.message if update.message else update.callback_query.message
     
-    if not wallet:
-        balance = user_balances.get(user_id, 0.0)
-        total_w = user_total_withdrawn.get(user_id, 0.0)
-        ref_count = user_referral_counts.get(user_id, 0)
-        ref_reward_total = ref_count * REFER_BONUS
-        
-        text = (
-            f"Wallet\n"
-            f"-----------------------\n"
-            f"User ID: `{user_id}`\n\n"
-            f"Balance: {balance:.2f}৳\n\n"
-            f"Total Withdrawn: {total_w:.2f}৳\n\n"
-            f"Referrals: {ref_count}\n\n"
-            f"Refer Reward: {ref_reward_total:.2f}৳\n"
-            f"---------------------------------\n"
-            f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n\n"
-            f"⚡ Fee: Free 0%\n"
-            f"-----------------------------------\n"
-            f"Wallet: সেট করা হয়নি"
-        )
+    balance = user_balances.get(user_id, 0.0)
+    total_w = user_total_withdrawn.get(user_id, 0.0)
+    ref_count = user_referral_counts.get(user_id, 0)
+    ref_reward_total = ref_count * REFER_BONUS
+    
+    wallet_status = f"{user_wallet_types.get(user_id, 'Wallet')}: {wallet}" if wallet else "সেট করা হয়নি"
 
+    text = (
+        f"Wallet\n"
+        f"-----------------------\n"
+        f"User ID: `{user_id}`\n\n"
+        f"Balance: {balance:.2f}৳\n\n"
+        f"Total Withdrawn: {total_w:.2f}৳\n\n"
+        f"Referrals: {ref_count}\n\n"
+        f"Refer Reward: {ref_reward_total:.2f}৳\n"
+        f"---------------------------------\n"
+        f"📌 Minimum Withdraw: {MIN_WITHDRAW:.2f}৳\n\n"
+        f"⚡ Fee: Free 0%\n"
+        f"-----------------------------------\n"
+        f"Wallet: {wallet_status}"
+    )
+
+    if not wallet:
         keyboard = [
             [InlineKeyboardButton("💳 Set Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-        return
+    else:
+        keyboard = [
+            [InlineKeyboardButton("💳 Change Wallet", callback_data="btn_setwallet"), InlineKeyboardButton("💸 Withdraw", callback_data="btn_withdraw_check")]
+        ]
 
-    context.user_data['waiting_for_withdraw_amount'] = True
-    w_type = user_wallet_types.get(user_id, "Wallet")
-    
-    text = (
-        f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
-        f"💳 To: {w_type}: {wallet}\n"
-        f"📉 Minimum: {MIN_WITHDRAW:.2f}৳"
-    )
-    await target_msg.reply_text(text, parse_mode="Markdown")
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -493,10 +489,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         wallet = user_wallets.get(user_id)
         if not wallet:
             try:
-                await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
-            except:
-                pass
+                await query.message.reply_text("❌ আগে 'Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।", parse_mode="Markdown")
+            except Exception as e:
+                print(f"Error sending wallet missing msg: {e}")
             return
+        
         context.user_data['waiting_for_withdraw_amount'] = True
         w_type = user_wallet_types.get(user_id, "Wallet")
         try:
@@ -669,9 +666,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     
-    # CallbackQueryHandler সবার উপরে রাখা হয়েছে যাতে ইনলাইন বাটন মিস না হয়
     app.add_handler(CallbackQueryHandler(callback_handler))
-    
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
     print("বট সফলভাবে চালু হচ্ছে...")
