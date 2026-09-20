@@ -447,7 +447,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"💸 এমাউন্ট: {amount} TK\n"
                 f"💳 নাম্বার: `{wallet}`\n"
                 f"📊 স্ট্যাটাস: **Processing...**",
-                parse_mode="Markdown"
+                parse_Mode="Markdown"
             )
         except ValueError:
             await update.message.reply_text("❌ সঠিক সংখ্যায় এমাউন্ট লিখে পাঠান (যেমন: 50 বা 100)।")
@@ -507,12 +507,32 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         context.user_data['waiting_for_withdraw_amount'] = True
         w_type = user_wallet_types.get(user_id, "Wallet")
-        await query.message.reply_text(
-            f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
-            f"💳 To: {w_type}: {wallet}\n"
-            f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
-            parse_mode="Markdown"
-        )
+        
+        keyboard = [
+            [InlineKeyboardButton("🔙 Back to Wallet", callback_data="btn_back_wallet")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        try:
+            await query.edit_message_text(
+                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+                f"💳 To: {w_type}: {wallet}\n"
+                f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+        except Exception:
+            await query.message.reply_text(
+                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
+                f"💳 To: {w_type}: {wallet}\n"
+                f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+        return
+
+    elif data == "btn_back_wallet":
+        await withdraw_handler(update, context)
         return
 
     elif data == "wallet_bkash":
