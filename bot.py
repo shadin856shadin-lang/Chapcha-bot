@@ -345,7 +345,7 @@ async def admin_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(admin_text, parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.chat.type != 'private':
+    if not update.message or update.message.chat.type != 'private':
         return
 
     user_id = update.effective_user.id
@@ -483,7 +483,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await verify_button(update, context)
         return
 
-    if data == "btn_setwallet":
+    elif data == "btn_setwallet":
         keyboard = [
             [InlineKeyboardButton("📱 bKash", callback_data="wallet_bkash"), InlineKeyboardButton("🟠 Nagad", callback_data="wallet_nagad")],
             [InlineKeyboardButton("🟣 Rocket", callback_data="wallet_rocket")]
@@ -492,7 +492,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", reply_markup=reply_markup, parse_mode="Markdown")
         return
 
-    if data == "btn_withdraw_check":
+    elif data == "btn_withdraw_check":
         wallet = user_wallets.get(user_id)
         if not wallet:
             await query.message.reply_text("❌ আগে '💳 Set Wallet' এ ক্লিক করে আপনার বিকাশ/নগদ/রকেট নাম্বার সেট করুন।")
@@ -507,22 +507,22 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    if data == "wallet_bkash":
+    elif data == "wallet_bkash":
         context.user_data['waiting_for_wallet_input'] = "bKash"
         await query.message.reply_text("📱 আপনার বিকাশ (bKash) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
-    if data == "wallet_nagad":
+    elif data == "wallet_nagad":
         context.user_data['waiting_for_wallet_input'] = "Nagad"
         await query.message.reply_text("🟠 আপনার নগদ (Nagad) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
-    if data == "wallet_rocket":
+    elif data == "wallet_rocket":
         context.user_data['waiting_for_wallet_input'] = "Rocket"
         await query.message.reply_text("🟣 আপনার রকেট (Rocket) একাউন্ট নাম্বারটি লিখে পাঠান:", parse_mode="Markdown")
         return
 
-    if data.startswith("app_") and user_id == ADMIN_ID:
+    elif data.startswith("app_") and user_id == ADMIN_ID:
         target_uid = int(data.split("_")[1])
         if target_uid in pending_withdrawals:
             pending_withdrawals[target_uid]['status'] = "Approved ✅"
@@ -544,24 +544,23 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"✅ ইউজার `{target_uid}`-এর উইথড্র সফলভাবে এপ্রুভ করা হয়েছে।", parse_mode="Markdown")
         return
 
-    if user_id != ADMIN_ID:
+    elif data in ["post_g1", "post_g2"] and user_id == ADMIN_ID:
+        photo = context.user_data.get('pending_photo')
+        caption = context.user_data.get('pending_caption', '')
+        if not photo:
+            await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
+            return
+
+        target = GROUP_1 if data == "post_g1" else GROUP_2
+        try:
+            await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
+            await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
+        except Exception as e:
+            await query.edit_message_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
+
+        context.user_data.pop('pending_photo', None)
+        context.user_data.pop('pending_caption', None)
         return
-
-    photo = context.user_data.get('pending_photo')
-    caption = context.user_data.get('pending_caption', '')
-    if not photo:
-        await query.edit_message_text("❌ ছবির সময়সীমা শেষ হয়ে গেছে বা ছবি পাওয়া যায়নি।")
-        return
-
-    target = GROUP_1 if data == "post_g1" else GROUP_2
-    try:
-        await context.bot.send_photo(chat_id=target, photo=photo, caption=caption)
-        await query.edit_message_text("✅ সফলভাবে নির্দিষ্ট গ্রুপে পোস্ট করা হয়েছে!")
-    except Exception as e:
-        await query.edit_message_text(f"❌ ত্রুটি দেখা দিয়েছে: {e}")
-
-    context.user_data.pop('pending_photo', None)
-    context.user_data.pop('pending_caption', None)
 
 async def activate_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
