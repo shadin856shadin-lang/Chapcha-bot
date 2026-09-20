@@ -255,6 +255,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     all_users.add(user_id)
     
     wallet = user_wallets.get(user_id)
+    target_msg = update.message if update.message else update.callback_query.message
     
     if not wallet:
         balance = user_balances.get(user_id, 0.0)
@@ -282,8 +283,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        msg = update.message if update.message else update.callback_query.message
-        await msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+        await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
         return
 
     context.user_data['waiting_for_withdraw_amount'] = True
@@ -294,8 +294,7 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💳 To: {w_type}: {wallet}\n"
         f"📉 Minimum: {MIN_WITHDRAW:.2f}৳"
     )
-    msg = update.message if update.message else update.callback_query.message
-    await msg.reply_text(text, parse_mode="Markdown")
+    await target_msg.reply_text(text, parse_mode="Markdown")
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
