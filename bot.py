@@ -1,3 +1,6 @@
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 import random
 import string
 from PIL import Image, ImageDraw, ImageFont
@@ -10,6 +13,23 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+
+# --- রেন্ডার পোর্ট বাইন্ডিং ও স্লিপ হওয়া রোধ করার জন্য মিনি ওয়েব সার্ভার ---
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running 24/7!")
+
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), SimpleHandler)
+    server.serve_forever()
+
+# ব্যাকগ্রাউন্ডে সার্ভার থ্রেড চালু করা হচ্ছে
+server_thread = threading.Thread(target=run_server, daemon=True)
+server_thread.start()
+# -------------------------------------------------------------------------
 
 ADMIN_ID = 8262339619
 ADMIN_BKASH = "01705351616"
@@ -462,6 +482,4 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
     print("বট সফলভাবে চালু হচ্ছে...")
-    
-    # কোড ক্র্যাশ হওয়ার সমস্যা এড়াতে স্ট্যান্ডার্ড ও সেফ পোলিং মেথড
     app.run_polling(drop_pending_updates=True)
