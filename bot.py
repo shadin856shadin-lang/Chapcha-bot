@@ -289,11 +289,8 @@ async def withdraw_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # নতুন মেসেজ হিসেবে পাঠানো যাতে ইনলাইন বাটনগুলো সঠিকভাবে কাজ করে
-    if update.callback_query:
-        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
-    elif update.message:
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
+    target_msg = update.message if update.message else update.callback_query.message
+    await target_msg.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def support_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -669,7 +666,7 @@ if __name__ == '__main__':
     
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.add_handler(CallbackQueryHandler(callback_handler))
+    # কমান্ড হ্যান্ডলারসমূহ সবার আগে
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("earn", earn_handler))
     app.add_handler(CommandHandler("ad", watch_ad_handler))
@@ -681,6 +678,8 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("approve", approve_withdraw_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     
+    # ক্যালব্যাক এবং মেসেজ হ্যান্ডলার কমান্ডের পরে
+    app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND), handle_message))
 
     print("বট সফলভাবে চালু হচ্ছে...")
