@@ -447,20 +447,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     elif text in ["💸 Withdraw", "Withdraw", "/withdraw"]:
         context.user_data['waiting_for_wallet_input'] = None
-        wallet = user_wallets.get(user_id)
-        if wallet:
-            context.user_data['waiting_for_withdraw_amount'] = True
-            w_type = user_wallet_types.get(user_id, "Wallet")
-            keyboard = [[InlineKeyboardButton("🔙 Back to Wallet", callback_data="btn_back_wallet")]]
-            await update.message.reply_text(
-                f"💵 **আপনি কত টাকা withdraw করতে চান??**\n\n"
-                f"💳 To: {w_type}: {wallet}\n"
-                f"📉 Minimum: {MIN_WITHDRAW:.2f}৳",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
-            )
-        else:
-            await withdraw_handler(update, context)
+        await withdraw_handler(update, context)
         return
     elif text in ["☎️ Support", "Support", "/support"]:
         context.user_data['waiting_for_wallet_input'] = None
@@ -507,17 +494,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         try:
-            await query.message.edit_text(
-                "💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", 
-                reply_markup=reply_markup, 
-                parse_mode="Markdown"
-            )
-        except Exception:
             await query.message.reply_text(
                 "💳 **আপনার পেমেন্ট মাধ্যম (Wallet Type) সিলেক্ট করুন:**", 
                 reply_markup=reply_markup, 
                 parse_mode="Markdown"
             )
+        except Exception as e:
+            print(f"Error in btn_setwallet: {e}")
         return
 
     elif data == "btn_withdraw_check":
@@ -545,8 +528,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
                 parse_mode="Markdown"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error in btn_withdraw_check: {e}")
         return
 
     elif data == "btn_back_wallet":
@@ -562,15 +545,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         method_name = wallet_map[data]
         context.user_data['waiting_for_wallet_input'] = method_name
         try:
-            await query.message.edit_text(
-                f"📱 আপনার **{method_name}** একাউন্ট নাম্বারটি এখন চ্যাট বক্সে লিখে পাঠান:",
-                parse_mode="Markdown"
-            )
-        except Exception:
             await query.message.reply_text(
-                f"📱 আপনার **{method_name}** একাউন্ট নাম্বারটি এখন চ্যাট বক্সে লিখে পাঠান:",
+                f"📱 আপনার **{method_name}** একাউন্ট নাম্বারটি (যেমন- 01XXXXXXXXX) এখন চ্যাট বক্সে লিখে পাঠান:",
                 parse_mode="Markdown"
             )
+        except Exception as e:
+            print(f"Error in wallet selection: {e}")
         return
 
     elif data.startswith("app_") and user_id == ADMIN_ID:
